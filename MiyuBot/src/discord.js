@@ -167,6 +167,8 @@ const recentMemberUpdates = new Map();
 const MEMBER_UPDATE_DEBOUNCE_MS = 1500;
 const recentBanActions = new Map();
 const BAN_ACTION_DEDUP_MS = 15000;
+const lastVoiceChannelByUser = new Map();
+const recentVoiceLogKeys = new Map();
 const antiNukeActionWindows = new Map();
 const antiSpamMessageWindows = new Map();
 const antiSpamStrikeLevels = new Map();
@@ -1059,6 +1061,11 @@ function sweepTimestampMap(
 
 
 function sweepRuntimeCaches() {
+    sweepTimestampMap(
+        recentVoiceLogKeys,
+        (value) => Number(value)
+    );
+
     sweepTimestampMap(
         recentBanActions,
         (value) => Number(value)
@@ -5064,6 +5071,176 @@ client.on(
  * ============================================================
  */
 
+function voiceChannelKey(guildId, userId) {
+    return `${guildId}:${userId}`;
+}
+
+function hydrateVoiceChannelTracker() {
+    for (const guild of client.guilds.cache.values()) {
+        for (const state of guild.voiceStates.cache.values()) {
+            if (!state?.id || !state.channelId) {
+                continue;
+            }
+
+            lastVoiceChannelByUser.set(
+                voiceChannelKey(guild.id, state.id),
+                state.channelId
+            );
+        }
+    }
+}
+
+function rememberVoiceChannel(guildId, userId, channelId) {
+    const key = voiceChannelKey(guildId, userId);
+
+    if (channelId) {
+        lastVoiceChannelByUser.set(key, channelId);
+        return;
+    }
+
+    lastVoiceChannelByUser.delete(key);
+}
+
+async function logVoiceChannelChange(
+    guild,
+    userId,
+    oldChannelId,
+    newChannelId,
+    memberHint = null
+) {
+    if (!guild || !userId || userId === client.user?.id) {
+        return;
+    }
+
+    if (oldChannelId === newChannelId) {
+        return;
+    }
+
+    const dedupeKey =
+        `${guild.id}:${userId}:${oldChannelId || "none"}:${newChannelId || "none"}`;
+
+    const lastLogAt = recentVoiceLogKeys.get(dedupeKey) || 0;
+
+    if (Date.now() - lastLogAt < 2500) {
+        return;
+    }
+
+    recentVoiceLogKeys.set(dedupeKey, Date.now());
+
+    let member = memberHint || guild.members.cache.get(userId) || null;
+
+    if (!member) {
+        try {
+            member = await guild.members.fetch(userId);
+        } catch (_error) {
+            member = null;
+        }
+    }
+
+    if (member?.user?.bot) {
+        return;
+    }
+
+    const mention = member ? `${member}` : `<@${userId}>`;
+
+    const voiceLabel = (channelId) => {
+        if (!channelId) {
+            return null;
+        }
+
+        const channel = guild.channels.cache.get(channelId);
+        const name = channel?.name || channelId;
+
+        return `<#${channelId}> (\`${name}\`)`;
+    };
+
+    const fromChannel = voiceLabel(oldChannelId);
+    const toChannel = voiceLabel(newChannelId);
+    const target = member || { id: userId };
+
+    let title = "Vocal";
+    let description = `${mention} a changé de vocal.`;
+    let actor = null;
+    const fields = [];
+
+    const auditLookup = (action) =>
+        Promise.race([
+            findAuditEntry(guild, action, userId, 8000),
+            new Promise((resolve) => setTimeout(() => resolve(null), 1200))
+        ]).catch(() => null);
+
+    if (!oldChannelId && newChannelId) {
+        title = "Vocal — join";
+        description = `${mention} a rejoint ${toChannel}.`;
+        fields.push({
+            name: "Salon rejoint",
+            value: toChannel,
+            inline: false
+        });
+    } else if (oldChannelId && !newChannelId) {
+        const kicked = await auditLookup(AuditLogEvent.MemberDisconnect);
+        actor = kicked?.executor || null;
+
+        if (actor && actor.id !== userId) {
+            title = "Vocal — déconnecté";
+            description =
+                `${mention} a été déconnecté de ${fromChannel} par ${actor}.`;
+        } else {
+            title = "Vocal — leave";
+            description = `${mention} a quitté ${fromChannel}.`;
+        }
+
+        fields.push({
+            name: "Salon quitté",
+            value: fromChannel,
+            inline: false
+        });
+    } else {
+        const moved = await auditLookup(AuditLogEvent.MemberMove);
+        actor = moved?.executor || null;
+
+        if (actor && actor.id !== userId) {
+            title = "Vocal — déplacé";
+            description =
+                `${mention} a été déplacé de ${fromChannel} vers ${toChannel} par ${actor}.`;
+        } else {
+            title = "Vocal — move";
+            description =
+                `${mention} est passé de ${fromChannel} vers ${toChannel}.`;
+        }
+
+        fields.push(
+            {
+                name: "Salon de départ",
+                value: fromChannel,
+                inline: true
+            },
+            {
+                name: "Salon d'arrivée",
+                value: toChannel,
+                inline: true
+            }
+        );
+    }
+
+    await sendSecurityLog(
+        guild,
+        {
+            title,
+            level: actor && actor.id !== userId
+                ? "warning"
+                : "info",
+            description,
+            target,
+            actor:
+                actor && actor.id !== userId
+                    ? actor
+                    : null,
+            fields
+        }
+    );
+}
+
 client.on(
     "voiceStateUpdate",
     async (
@@ -5076,10 +5253,6 @@ client.on(
                 oldState.guild ||
                 null;
 
-            if (!guild) {
-                return;
-            }
-
             const userId =
                 newState.id ||
                 oldState.id ||
@@ -5087,150 +5260,34 @@ client.on(
                 oldState.member?.id ||
                 null;
 
-            if (!userId || userId === client.user?.id) {
+            if (!guild || !userId) {
                 return;
             }
 
-            let member =
-                newState.member ||
-                oldState.member ||
-                guild.members.cache.get(userId) ||
-                null;
-
-            if (!member) {
-                try {
-                    member = await guild.members.fetch(userId);
-                } catch (_error) {
-                    member = null;
-                }
-            }
-
-            if (member?.user?.bot) {
-                return;
-            }
-
-            const oldChannelId =
+            const trackedKey = voiceChannelKey(guild.id, userId);
+            const previousChannelId =
+                lastVoiceChannelByUser.get(trackedKey) ||
                 oldState.channelId ||
                 oldState.channel?.id ||
                 null;
 
-            const newChannelId =
+            const nextChannelId =
                 newState.channelId ||
                 newState.channel?.id ||
                 null;
 
-            if (oldChannelId === newChannelId) {
-                return;
-            }
+            rememberVoiceChannel(
+                guild.id,
+                userId,
+                nextChannelId
+            );
 
-            const mention = member
-                ? `${member}`
-                : `<@${userId}>`;
-
-            const voiceLabel = (channelId, state) => {
-                if (!channelId) {
-                    return null;
-                }
-
-                const channel =
-                    state?.channel ||
-                    guild.channels.cache.get(channelId);
-
-                const name = channel?.name || channelId;
-
-                return `<#${channelId}> (\`${name}\`)`;
-            };
-
-            const fromChannel = voiceLabel(oldChannelId, oldState);
-            const toChannel = voiceLabel(newChannelId, newState);
-            const target = member || { id: userId };
-
-            let title = "Vocal";
-            let description = null;
-            let actor = null;
-            const fields = [];
-
-            if (!oldChannelId && newChannelId) {
-                title = "Vocal — join";
-                description = `${mention} a rejoint ${toChannel}.`;
-                fields.push({
-                    name: "Salon rejoint",
-                    value: toChannel,
-                    inline: false
-                });
-            } else if (oldChannelId && !newChannelId) {
-                const kicked = await findAuditEntry(
-                    guild,
-                    AuditLogEvent.MemberDisconnect,
-                    userId,
-                    8000
-                );
-
-                actor = kicked?.executor || null;
-
-                if (actor && actor.id !== userId) {
-                    title = "Vocal — déconnecté";
-                    description =
-                        `${mention} a été déconnecté de ${fromChannel} par ${actor}.`;
-                } else {
-                    title = "Vocal — leave";
-                    description = `${mention} a quitté ${fromChannel}.`;
-                }
-
-                fields.push({
-                    name: "Salon quitté",
-                    value: fromChannel,
-                    inline: false
-                });
-            } else {
-                const moved = await findAuditEntry(
-                    guild,
-                    AuditLogEvent.MemberMove,
-                    userId,
-                    8000
-                );
-
-                actor = moved?.executor || null;
-
-                if (actor && actor.id !== userId) {
-                    title = "Vocal — déplacé";
-                    description =
-                        `${mention} a été déplacé de ${fromChannel} vers ${toChannel} par ${actor}.`;
-                } else {
-                    title = "Vocal — move";
-                    description =
-                        `${mention} est passé de ${fromChannel} vers ${toChannel}.`;
-                }
-
-                fields.push(
-                    {
-                        name: "Salon de départ",
-                        value: fromChannel,
-                        inline: true
-                    },
-                    {
-                        name: "Salon d'arrivée",
-                        value: toChannel,
-                        inline: true
-                    }
-                );
-            }
-
-            await sendSecurityLog(
+            await logVoiceChannelChange(
                 guild,
-                {
-                    title,
-                    level: actor && actor.id !== userId
-                        ? "warning"
-                        : "info",
-                    description,
-                    target,
-                    actor:
-                        actor && actor.id !== userId
-                            ? actor
-                            : null,
-                    fields
-                }
+                userId,
+                previousChannelId,
+                nextChannelId,
+                newState.member || oldState.member || null
             );
         } catch (error) {
             console.error(
@@ -5442,11 +5499,19 @@ client.on("guildCreate", async (guild) => {
  * ============================================================
  */
 
-client.once(
-    "clientReady",
-    async () => {
+let discordReadyHandled = false;
+
+async function onDiscordReady() {
+    if (discordReadyHandled) {
+        return;
+    }
+
+    discordReadyHandled = true;
+
         try {
             await databaseReady;
+
+            hydrateVoiceChannelTracker();
 
             setInterval(
                 sweepRuntimeCaches,
@@ -5539,8 +5604,10 @@ client.once(
                 error
             );
         }
-    }
-);
+}
+
+client.once("ready", onDiscordReady);
+client.once("clientReady", onDiscordReady);
 
 
 /*
