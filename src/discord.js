@@ -819,7 +819,10 @@ function buildInviteSnapshot(inviteCollection) {
                 uses: Number(invite.uses || 0),
                 inviterId: invite.inviter?.id || null,
                 inviterTag: invite.inviter?.tag || null,
-                channelId: invite.channel?.id || null
+                channelId: invite.channel?.id || null,
+                maxUses: invite.maxUses || 0,
+                maxAge: invite.maxAge || 0,
+                expiresTimestamp: invite.expiresTimestamp || null
             }
         );
     }
@@ -901,6 +904,68 @@ async function detectUsedInvite(guild) {
     }
 
     return detected;
+}
+
+
+async function detectAndLogNewInvites(guild) {
+    if (!guild?.members?.me) {
+        return;
+    }
+
+    if (
+        !guild.members.me.permissions.has(
+            PermissionsBitField.Flags.ManageGuild
+        )
+    ) {
+        return;
+    }
+
+    const previousSnapshot =
+        inviteUsageCache.get(guild.id);
+
+    let invites;
+
+    try {
+        invites = await guild.invites.fetch();
+    } catch (error) {
+        return;
+    }
+
+    const newSnapshot = buildInviteSnapshot(invites);
+
+    if (previousSnapshot) {
+        for (const [code, currentInvite] of newSnapshot.entries()) {
+            if (previousSnapshot.has(code)) {
+                continue;
+            }
+
+            let inviter = null;
+
+            if (currentInvite.inviterId) {
+                inviter =
+                    await guild.client.users.fetch(
+                        currentInvite.inviterId
+                    ).catch(() => ({
+                        id: currentInvite.inviterId,
+                        username: currentInvite.inviterTag || "Unknown"
+                    }));
+            }
+
+            await sendInviteCreateLog(
+                guild,
+                {
+                    code,
+                    inviter,
+                    channelId: currentInvite.channelId,
+                    expiresTimestamp: currentInvite.expiresTimestamp,
+                    maxUses: currentInvite.maxUses,
+                    maxAge: currentInvite.maxAge
+                }
+            );
+        }
+    }
+
+    inviteUsageCache.set(guild.id, newSnapshot);
 }
 
 
@@ -4319,6 +4384,7 @@ client.on(
                 );
 
             if (!code) {
+                await detectAndLogNewInvites(guild);
                 return;
             }
 
@@ -5015,26 +5081,49 @@ client.on(
             const oldChannelValue =
                 oldState.channelId
                     ? `<#${oldState.channelId}>`
-                    : "Aucun";
+                    : null;
 
             const newChannelValue =
                 newState.channelId
                     ? `<#${newState.channelId}>`
-                    : "Aucun";
+                    : null;
 
             let title = "Vocal";
             let description = null;
+            const fields = [];
 
             if (!oldState.channelId && newState.channelId) {
                 title = "Vocal rejoint";
                 description = `${member} a rejoint ${newChannelValue}.`;
+                fields.push({
+                    name: "Salon",
+                    value: newChannelValue,
+                    inline: true
+                });
             } else if (oldState.channelId && !newState.channelId) {
                 title = "Vocal quitté";
                 description = `${member} a quitté ${oldChannelValue}.`;
+                fields.push({
+                    name: "Salon",
+                    value: oldChannelValue,
+                    inline: true
+                });
             } else {
                 title = "Vocal déplacé";
                 description =
-                    `${member} : ${oldChannelValue} → ${newChannelValue}`;
+                    `${member} est passé de ${oldChannelValue} à ${newChannelValue}.`;
+                fields.push(
+                    {
+                        name: "De",
+                        value: oldChannelValue,
+                        inline: true
+                    },
+                    {
+                        name: "Vers",
+                        value: newChannelValue,
+                        inline: true
+                    }
+                );
             }
 
             await sendSecurityLog(
@@ -5044,14 +5133,7 @@ client.on(
                     level: "info",
                     description,
                     target: member,
-                    fields: [
-                        {
-                            name: "Salon",
-                            value:
-                                `${oldChannelValue} → ${newChannelValue}`,
-                            inline: false
-                        }
-                    ]
+                    fields
                 }
             );
         } catch (error) {
@@ -5340,6 +5422,15 @@ client.once(
                     );
                 }
             }
+
+            setInterval(
+                async () => {
+                    for (const guild of client.guilds.cache.values()) {
+                        await detectAndLogNewInvites(guild);
+                    }
+                },
+                8000
+            ).unref();
 
             console.log(
                 "🗄️ Base de données prête."
