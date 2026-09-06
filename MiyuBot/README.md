@@ -2,23 +2,89 @@
 
 Bot **Discord** (sécurité + modération, commandes `/`) et **Twitch** (chat `!`).
 
-**Prod :** une seule instance, sur **Fly.io** (`miyubottv`).  
-Ne lance **jamais** `npm start` / PM2 sur un PC tant que Fly tourne : les commandes se doublent.
-
-Health : `https://miyubottv.fly.dev/health`
+Une seule instance en production. Ne lance pas `npm start` en local tant que le bot tourne déjà (Fly, PC, etc.) : les commandes se doublent.
 
 ---
 
-## Discord — commandes importantes
+## 1. Copier la config (sans valeurs personnelles)
 
-Tape `/` dans Discord (plus de `!`).
+```bash
+npm install
+cp .env.example .env
+```
+
+Remplis **ton** `.env`. Ne commite jamais `.env`.
+
+---
+
+## 2. Discord
+
+1. [Discord Developer Portal](https://discord.com/developers/applications) → New Application → Bot.
+2. Copie le token → `DISCORD_TOKEN`.
+3. Onglet Bot → intents : **Server Members** + **Message Content**.
+4. Invite avec `bot` + `applications.commands` (Administrateur, ou au minimum : messages, embeds, kick/ban/timeout, salons, rôles, logs d’audit, gérer le serveur).
+5. Place le rôle du bot **au-dessus** des membres à modérer.
+6. Sur le serveur : `/securitylogs create`, puis ouvre le salon **miyubot-logs**.
+
+---
+
+## 3. Twitch
+
+| Variable | Qui | Quoi |
+|---|---|---|
+| `TWITCH_USERNAME` | compte **bot** | login IRC (minuscules) |
+| `TWITCH_OAUTH_TOKEN` | compte **bot** | token chat, forme `oauth:...` (`chat:read` + `chat:edit`) |
+| `TWITCH_CHANNEL` | ta **chaîne** | login sans `https://twitch.tv/` |
+| `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | app Twitch | Helix (`!uptime`, `!title`, `!game`, `!so`) |
+| `TWITCH_ADS_TOKEN` | compte **streamer** | alerte pubs, scope `channel:read:ads` (pas le token IRC du bot) |
+
+Le bot doit être **modérateur** de la chaîne.
+
+Optionnel :
+
+| Variable | Rôle |
+|---|---|
+| `TWITCH_DISCORD_INVITE` | lien envoyé par `!discord` |
+| `TWITCH_SOCIALS_URL` | lien envoyé par `!socials` |
+| `TWITCH_DISCORD_LIVE_CHANNEL_ID` | salon Discord pour l’annonce live |
+
+---
+
+## 4. Secrets Fly (à remplir toi-même)
+
+Ne copie pas d’exemple déjà remplis. Dans Fly → Secrets :
+
+```text
+DISCORD_TOKEN=
+TWITCH_ENABLED=true
+TWITCH_USERNAME=
+TWITCH_OAUTH_TOKEN=
+TWITCH_CHANNEL=
+TWITCH_CLIENT_ID=
+TWITCH_CLIENT_SECRET=
+TWITCH_ADS_TOKEN=
+TWITCH_DISCORD_LIVE_CHANNEL_ID=
+TWITCH_DISCORD_INVITE=
+TWITCH_SOCIALS_URL=
+```
+
+`PORT` et `HOST` : laissés à Fly. Après un secret, l’app redémarre.
+
+Health : `https://<ton-app>.fly.dev/health`  
+Objectif : `"discord": true` et `"twitch_connected": true`.
+
+---
+
+## Discord — commandes
+
+Tape `/` dans Discord.
 
 | Commande | Rôle |
 |---|---|
 | `/ping` `/help` `/userinfo` | Test et aide |
-| `/securitylogs create` | Crée `#🔐・miyubot-logs` + preset ~50 membres |
-| `/securitylogs info` / `test` | Vérifie les logs |
-| `/setupcheck` | Checklist permissions / rôle |
+| `/securitylogs create` | Salon logs + preset ~50 membres |
+| `/securitylogs info` / `test` | Vérifier les logs |
+| `/setupcheck` | Permissions / rôle |
 | `/config parametres:show` | Voir la sécu |
 | `/ban` `/kick` `/timeout` `/warn` | Modération |
 | `/lockdown` `/unlock` | Lock serveur |
@@ -27,82 +93,28 @@ Tape `/` dans Discord (plus de `!`).
 
 Autres : `/unban` `/softban` `/untimeout` `/warnings` `/nick` `/purge` `/slowmode` `/syncmembers`
 
-**Logs (salon miyubot-logs) :** join serveur, invitations, messages edit/delete, vocal join / move / leave (et move/déco par un modo).
-
-**Nouveau serveur Discord**
-1. Invite avec `bot` + `applications.commands` (idéalement Administrateur, ou au minimum : messages, embeds, kick/ban/timeout, salons/rôles, logs d’audit, gérer le serveur).
-2. Intents portail : **Server Members** + **Message Content**.
-3. Rôle MiyuBot **au-dessus** des membres à modérer.
-4. `/securitylogs create` puis ouvrir **#miyubot-logs** (pas le général).
+Logs (salon **miyubot-logs**) : join, invitations, messages edit/delete, vocal join / move / leave.
 
 Preset `/securitylogs create` : anti-raid, anti-spam, anti-nuke, kick des comptes de moins de **30 jours**.
 
 ---
 
-## Twitch — commandes importantes
+## Twitch — commandes
 
-Le bot doit être **modérateur** de la chaîne.
+Préfixe `!`.
 
-| Commande | Rôle |
-|---|---|
-| `!ping` `!help` | Test |
-| `!uptime` `!title` `!game` | Live (Helix) |
-| `!discord` | Invite Kitsunara |
-| `!socials` | https://sociallinks.edgeone.dev |
-| `!so pseudo` | Shoutout (modos) |
-| `!permit` `!timeout` `!ban` | Modo chat |
-| `!slow` / `!slowoff` `!clear` | Salon |
+Tout le monde : `!ping` `!help` `!uptime` `!title` `!game` `!socials` `!discord`
 
-Autres modos : `!unban` `!followers` `!emoteonly` `!cmd add/remove/list`
+Modos : `!so` / `!shoutout` `!permit` `!timeout` `!ban` `!unban` `!slow` `!slowoff` `!followers` `!followersoff` `!emoteonly` `!emoteonlyoff` `!clear` `!cmd add/remove/list`
 
-**Auto :** alerte ~30 s avant une **pub Twitch** (si `TWITCH_ADS_TOKEN` est valide).  
-Automod viewers : spam, caps, liens (clips/YouTube OK). Les modos sont ignorés.
+Auto : alerte ~30 s avant une pub si `TWITCH_ADS_TOKEN` est valide. Automod viewers : spam, caps, liens (clips/YouTube OK).
 
 ---
 
-## Secrets Fly (minimum)
+## Limites
 
-```text
-DISCORD_TOKEN
-TWITCH_ENABLED=true
-TWITCH_USERNAME
-TWITCH_OAUTH_TOKEN          (chat bot, oauth:…)
-TWITCH_CHANNEL
-TWITCH_CLIENT_ID
-TWITCH_CLIENT_SECRET
-TWITCH_ADS_TOKEN            (token du STREAMER, scope channel:read:ads)
-TWITCH_DISCORD_LIVE_CHANNEL_ID   (optionnel, annonce live Discord)
-TWITCH_DISCORD_INVITE            (optionnel, sinon invite Kitsunara par défaut)
-```
-
-Après un changement de code : **Deploy** sur Fly (branche `main`).
-
----
-
-## Limites à connaître
-
-- SQLite est **réinitialisée à chaque Deploy** Fly (warns, cases, whitelist, config). Le salon `miyubot-logs` est **retrouvé tout seul** par son nom.
-- `TWITCH_ADS_TOKEN` **expire** : il faudra le régénérer un jour (ou brancher un refresh token).
+- SQLite est **vidée à chaque Deploy** Fly (warns, cases, whitelist, config). Le salon `miyubot-logs` est retrouvé par son nom.
+- `TWITCH_ADS_TOKEN` **expire**.
 - Une instance seulement.
 
----
-
-## Local (debug uniquement, Fly arrêté)
-
-```bash
-npm install
-cp .env.example .env
-npm start
-```
-
-Tests : `npm test`
-
----
-
-## Prêt à lancer ?
-
-**Discord — oui**, pour un autre serveur, si : rôle en haut, intents OK, `/securitylogs create`, une seule instance Fly.
-
-**Twitch — oui** pour le chat (`!discord`, `!socials`, `!so`, Helix), si le bot est modo et Helix configuré.
-
-**Pubs auto — oui seulement** tant que `TWITCH_ADS_TOKEN` est encore valide et que Fly a bien été déployé avec ce secret.
+Local (Fly arrêté) : `npm start` — tests : `npm test`
