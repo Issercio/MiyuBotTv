@@ -19,7 +19,7 @@ const DEFAULTS = {
     anti_raid_threshold: 10,
     anti_raid_window: 15,
     auto_lockdown: 0,
-    min_account_age_days: 0,
+    min_account_age_days: 30,
     anti_spam_enabled: 1,
     anti_spam_threshold: 6,
     anti_spam_window: 8,

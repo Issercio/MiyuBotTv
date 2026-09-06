@@ -178,7 +178,7 @@ const DEFAULT_GUILD_SETTINGS = {
     anti_raid_window: 15,
     auto_lockdown: 0,
     lockdown_active: 0,
-    min_account_age_days: 0,
+    min_account_age_days: 30,
     anti_spam_enabled: 1,
     anti_spam_threshold: 6,
     anti_spam_window: 8,
@@ -2463,6 +2463,114 @@ async function checkRaid(member) {
 }
 
 
+async function applyMinAccountAgeKick(member) {
+    if (!member?.guild || member.user?.bot) {
+        return false;
+    }
+
+    if (member.id === member.guild.ownerId) {
+        return false;
+    }
+
+    const settings =
+        await ensureGuildSettings(
+            member.guild.id
+        );
+
+    const minDays =
+        Number(settings.min_account_age_days || 0);
+
+    if (minDays <= 0) {
+        return false;
+    }
+
+    const ageDays =
+        (Date.now() - member.user.createdTimestamp) /
+        (24 * 60 * 60 * 1000);
+
+    if (ageDays >= minDays) {
+        return false;
+    }
+
+    const reason =
+        `Compte trop récent (${ageDays.toFixed(1)} j, minimum ${minDays} j)`;
+
+    if (!member.kickable) {
+        await sendSecurityLog(
+            member.guild,
+            {
+                title: "Kick âge du compte impossible",
+                level: "warning",
+                style: "wick",
+                target: member,
+                description: reason,
+                fields: [
+                    {
+                        name: "Cause",
+                        value:
+                            "MiyuBot n'a pas le droit d'expulser ce membre (rôle trop haut).",
+                        inline: false
+                    }
+                ]
+            }
+        );
+
+        return false;
+    }
+
+    await member.send(
+        `Tu as été expulsé de **${member.guild.name}** : ton compte Discord a moins de **${minDays} jours**.`
+    ).catch(() => null);
+
+    await member.kick(reason);
+
+    const caseId =
+        await createModerationCase(
+            member.guild.id,
+            member.id,
+            client.user?.id || null,
+            "account_age",
+            "kick",
+            reason,
+            {
+                age_days: Number(ageDays.toFixed(2)),
+                min_days: minDays
+            }
+        );
+
+    await sendSecurityLog(
+        member.guild,
+        {
+            title: "Compte trop récent — kick",
+            level: "warning",
+            style: "wick",
+            target: member,
+            description: reason,
+            fields: [
+                {
+                    name: "Compte créé",
+                    value:
+                        `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`,
+                    inline: true
+                },
+                {
+                    name: "Minimum",
+                    value: `${minDays} jours`,
+                    inline: true
+                },
+                {
+                    name: "Case",
+                    value: caseId ? `#${caseId}` : "—",
+                    inline: true
+                }
+            ]
+        }
+    );
+
+    return true;
+}
+
+
 async function applyQuarantineIfNeeded(member) {
     if (!member?.guild || member.user?.bot) {
         return;
@@ -2747,9 +2855,16 @@ client.on(
                 );
             }
 
-            await applyQuarantineIfNeeded(
-                member
-            );
+            const kickedYoungAccount =
+                await applyMinAccountAgeKick(
+                    member
+                );
+
+            if (!kickedYoungAccount) {
+                await applyQuarantineIfNeeded(
+                    member
+                );
+            }
 
             await checkRaid(
                 member
@@ -4162,6 +4277,80 @@ client.on(
         } catch (error) {
             console.error(
                 "❌ Erreur inviteCreate :",
+                error
+            );
+        }
+    }
+);
+
+
+client.on(
+    "guildAuditLogEntryCreate",
+    async (entry, guild) => {
+        try {
+            if (
+                !guild ||
+                entry.action !==
+                    AuditLogEvent.InviteCreate
+            ) {
+                return;
+            }
+
+            const changeValue = (key) => {
+                const change =
+                    (entry.changes || []).find(
+                        (item) => item.key === key
+                    );
+
+                if (!change) {
+                    return undefined;
+                }
+
+                return change.new ?? change.newValue;
+            };
+
+            const code =
+                entry.target?.code ||
+                changeValue("code") ||
+                (
+                    typeof entry.target === "string"
+                        ? entry.target
+                        : null
+                );
+
+            if (!code) {
+                return;
+            }
+
+            await sendInviteCreateLog(
+                guild,
+                {
+                    code,
+                    inviter:
+                        entry.executor ||
+                        entry.target?.inviter ||
+                        null,
+                    channelId:
+                        entry.target?.channelId ||
+                        entry.target?.channel?.id ||
+                        changeValue("channel_id") ||
+                        null,
+                    expiresTimestamp:
+                        entry.target?.expiresTimestamp ||
+                        null,
+                    maxUses:
+                        entry.target?.maxUses ??
+                        changeValue("max_uses") ??
+                        0,
+                    maxAge:
+                        entry.target?.maxAge ??
+                        changeValue("max_age") ??
+                        0
+                }
+            );
+        } catch (error) {
+            console.error(
+                "❌ Erreur audit InviteCreate :",
                 error
             );
         }

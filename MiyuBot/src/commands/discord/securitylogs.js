@@ -14,6 +14,10 @@ const {
     sendSecurityLog
 } = require("../../security/securityLogger");
 
+const {
+    applyStarterPreset
+} = require("../../security/starterPreset");
+
 module.exports = {
     name: "securitylogs",
 
@@ -135,7 +139,7 @@ module.exports = {
                     15,
                     0,
                     0,
-                    0,
+                    30,
                     1,
                     1,
                     now,
@@ -178,14 +182,64 @@ module.exports = {
                     );
 
                 if (existingChannel) {
+                    await applyStarterPreset(message.guild.id);
+
                     return message.reply(
-                        `⚠️ Le salon de logs est déjà configuré : ${existingChannel}`
+                        `${existingChannel} est déjà le salon de logs.\n` +
+                        "Profil sécurité **communauté ~50 membres** appliqué :\n" +
+                        "• kick auto des comptes de moins de **30 jours**\n" +
+                        "• anti-raid, anti-spam, anti-nuke activés"
                     );
                 }
             }
 
             const channelName =
                 "🔐・miyubot-logs";
+
+            const logOverwrites = [
+                {
+                    id: message.guild.roles.everyone.id,
+                    deny: [
+                        PermissionFlagsBits.ViewChannel
+                    ]
+                },
+                {
+                    id: message.client.user.id,
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.EmbedLinks,
+                        PermissionFlagsBits.ReadMessageHistory,
+                        PermissionFlagsBits.ManageMessages
+                    ]
+                }
+            ];
+
+            for (const role of message.guild.roles.cache.values()) {
+                if (
+                    role.id === message.guild.id ||
+                    role.managed
+                ) {
+                    continue;
+                }
+
+                if (
+                    role.permissions.has(
+                        PermissionFlagsBits.Administrator
+                    ) ||
+                    role.permissions.has(
+                        PermissionFlagsBits.ManageGuild
+                    )
+                ) {
+                    logOverwrites.push({
+                        id: role.id,
+                        allow: [
+                            PermissionFlagsBits.ViewChannel,
+                            PermissionFlagsBits.ReadMessageHistory
+                        ]
+                    });
+                }
+            }
 
             let channel =
                 message.guild.channels.cache.find(
@@ -200,33 +254,10 @@ module.exports = {
                         name: channelName,
                         type: ChannelType.GuildText,
                         topic:
-                            "🔐 Journal centralisé de sécurité de MiyuBot.",
+                            "Journal de sécurité MiyuBot (messages, vocal, joins, invitations).",
                         reason:
                             "Création du salon centralisé des logs MiyuBot",
-                        permissionOverwrites: [
-                            {
-                                id: message.guild.roles.everyone.id,
-                                deny: [
-                                    PermissionFlagsBits.ViewChannel
-                                ]
-                            },
-                            {
-                                id: message.client.user.id,
-                                allow: [
-                                    PermissionFlagsBits.ViewChannel,
-                                    PermissionFlagsBits.SendMessages,
-                                    PermissionFlagsBits.EmbedLinks,
-                                    PermissionFlagsBits.ReadMessageHistory
-                                ]
-                            },
-                            {
-                                id: message.member.id,
-                                allow: [
-                                    PermissionFlagsBits.ViewChannel,
-                                    PermissionFlagsBits.ReadMessageHistory
-                                ]
-                            }
-                        ]
+                        permissionOverwrites: logOverwrites
                     });
             }
 
@@ -245,6 +276,8 @@ module.exports = {
                 ]
             );
 
+            const preset = await applyStarterPreset(message.guild.id);
+
             const embed =
                 new EmbedBuilder()
                     .setColor(0x57F287)
@@ -252,7 +285,8 @@ module.exports = {
                         "🔐 Salon de logs configuré"
                     )
                     .setDescription(
-                        `Le salon centralisé de sécurité de MiyuBot est maintenant ${channel}.`
+                        `Le salon ${channel} est prêt.\n` +
+                        "Profil **communauté ~50 membres** (évolutif) appliqué."
                     )
                     .addFields(
                         {
@@ -264,14 +298,26 @@ module.exports = {
                         {
                             name: "🔒 Accès",
                             value:
-                                "Salon privé",
+                                "Admins / Gérer le serveur",
+                            inline: true
+                        },
+                        {
+                            name: "🆕 Comptes",
+                            value:
+                                `Kick auto si < **${preset.min_account_age_days} jours**`,
                             inline: true
                         },
                         {
                             name: "🛡️ Protection",
                             value:
-                                "Logs de sécurité activés",
-                            inline: true
+                                "Anti-raid, anti-spam (timeout), anti-nuke",
+                            inline: false
+                        },
+                        {
+                            name: "📋 Logs",
+                            value:
+                                "Messages (modif/suppr), vocal, joins, invitations (menu inclus)",
+                            inline: false
                         }
                     )
                     .setFooter({
