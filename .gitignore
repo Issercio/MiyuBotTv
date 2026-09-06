@@ -4,3 +4,6 @@ logs/
 *.db
 *.db-wal
 *.db-shm
+.frames/
+.frames2/
+.frames3/
