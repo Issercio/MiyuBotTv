@@ -11,8 +11,22 @@ const {
 
 startHealthServer();
 
-const discordClient = require("./discord");
-const twitchRuntime = require("./twitch");
+let discordClient = null;
+let twitchRuntime = {
+	enabled: false
+};
+
+try {
+	discordClient = require("./discord");
+} catch (error) {
+	console.error("❌ Discord n'a pas démarré :", error);
+}
+
+try {
+	twitchRuntime = require("./twitch");
+} catch (error) {
+	console.error("❌ Twitch n'a pas démarré :", error);
+}
 
 if (twitchRuntime && typeof twitchRuntime.setDiscordClient === "function") {
 	twitchRuntime.setDiscordClient(discordClient);

@@ -5222,198 +5222,6 @@ client.on(
             "MiyuBot utilise maintenant les commandes **slash**.\n" +
             "Tape `/` puis choisis une commande (`/help`, `/ping`, `/ban`…)."
         );
-
-        const args =
-            message.content
-                .slice(prefix.length)
-                .trim()
-                .split(/\s+/);
-
-        const commandName =
-            args
-                .shift()
-                ?.toLowerCase();
-
-        const subcommandArg =
-            String(args[0] || "")
-                .toLowerCase()
-                .replace(/[.,;:!?]+$/, "");
-
-        if (!commandName) {
-            return;
-        }
-
-        if (claimedCommandIds.has(message.id)) {
-            return;
-        }
-
-        claimedCommandIds.add(message.id);
-
-        if (claimedCommandIds.size > 3000) {
-            const oldest = claimedCommandIds.values().next().value;
-            claimedCommandIds.delete(oldest);
-        }
-
-        const claimed = await claimCommand(
-            `discord:${message.id}`
-        );
-
-        if (!claimed) {
-            return;
-        }
-
-        const command =
-            client.commands.get(
-                commandName
-            );
-
-        if (!command) {
-            return;
-        }
-
-        const isAdmin =
-            Boolean(message.member) &&
-            message.member.permissions.has(
-                PermissionsBitField.Flags.Administrator
-            );
-
-        const publicCommands = [
-            "help",
-            "ping",
-            "userinfo"
-        ];
-
-        if (!publicCommands.includes(command.name)) {
-            if (command.permission) {
-                if (
-                    !isAdmin &&
-                    (
-                        !message.member ||
-                        !message.member.permissions.has(
-                            command.permission
-                        )
-                    )
-                ) {
-                    return message.reply(
-                        "❌ Il te manque la permission pour cette commande."
-                    );
-                }
-            } else if (!isAdmin) {
-                return message.reply(
-                    "❌ Cette commande est réservée aux administrateurs.\n" +
-                    "Utilise `!help` pour voir les commandes disponibles pour ton rôle."
-                );
-            }
-        }
-
-        try {
-            await command.execute(
-                message,
-                args
-            );
-
-            const securityCommands = [
-                "lockdown",
-                "unlock",
-                "config",
-                "setupcheck",
-                "securitylogs",
-                "antinuke",
-                "whitelist"
-            ];
-
-            if (
-                securityCommands.includes(
-                    commandName
-                )
-            ) {
-                const rawCommandText =
-                    String(message.content || "")
-                        .trim()
-                        .toLowerCase();
-
-                const normalizedSubcommand =
-                    subcommandArg
-                        .trim()
-                        .replace(/\u200B/g, "");
-
-                const configMutatingSubcommands = [
-                    "lockdown",
-                    "raid",
-                    "spam",
-                    "bot",
-                    "antinuke",
-                    "quarantine",
-                    "age",
-                    "logs"
-                ];
-
-                const shouldSkipSecurityLog =
-                    (/^!config(?:\s+show)?[.,;:!?]*$/i.test(rawCommandText)) ||
-                    (commandName === "config" &&
-                        (
-                            !normalizedSubcommand ||
-                            normalizedSubcommand === "show" ||
-                            !configMutatingSubcommands.includes(
-                                normalizedSubcommand
-                            )
-                        )) ||
-                    (commandName === "securitylogs" &&
-                        (
-                            !normalizedSubcommand ||
-                            normalizedSubcommand === "info" ||
-                            normalizedSubcommand === "test"
-                        )) ||
-                    (commandName === "antinuke" &&
-                        (
-                            !normalizedSubcommand ||
-                            normalizedSubcommand === "status"
-                        )) ||
-                    (commandName === "whitelist" &&
-                        (
-                            !normalizedSubcommand ||
-                            normalizedSubcommand === "help" ||
-                            normalizedSubcommand === "list"
-                        ));
-
-                if (shouldSkipSecurityLog) {
-                    return;
-                }
-
-                await logConfiguration(
-                    message.guild,
-                    {
-                        actor:
-                            message.author,
-
-                        description:
-                            `La commande \`!${commandName}\` ` +
-                            `a été exécutée.`,
-
-                        fields: [
-                            {
-                                name: "💬 Commande",
-                                value:
-                                    `\`${cleanLogText(message.content, "Commande", 400)}\``
-                            }
-                        ]
-                    }
-                );
-            }
-        } catch (error) {
-            console.error(
-                `❌ Erreur commande ${commandName}:`,
-                error
-            );
-
-            await message.reply(
-                "❌ Une erreur est survenue lors de l'exécution de cette commande."
-            );
-        }
-    }
-);
-
-
     }
 );
 
@@ -5429,18 +5237,31 @@ async function runSlashCommand(interaction) {
         });
     }
 
-    const claimed = await claimCommand(`discord-slash:${interaction.id}`);
-    if (!claimed) return;
+    const claimed = await claimCommand(
+        `discord-slash:${interaction.id}`
+    );
+
+    if (!claimed) {
+        return;
+    }
 
     const isAdmin =
         Boolean(interaction.member) &&
-        interaction.member.permissions.has(PermissionsBitField.Flags.Administrator);
+        interaction.member.permissions.has(
+            PermissionsBitField.Flags.Administrator
+        );
 
     const publicCommands = ["help", "ping", "userinfo"];
 
     if (!publicCommands.includes(command.name)) {
         if (command.permission) {
-            if (!isAdmin && (!interaction.member || !interaction.member.permissions.has(command.permission))) {
+            if (
+                !isAdmin &&
+                (
+                    !interaction.member ||
+                    !interaction.member.permissions.has(command.permission)
+                )
+            ) {
                 return interaction.reply({
                     content: "❌ Il te manque la permission pour cette commande.",
                     ephemeral: true
@@ -5459,31 +5280,85 @@ async function runSlashCommand(interaction) {
     const context = wrapInteraction(interaction);
     const spec = slashDefinitions[commandName] || {};
     const args = buildArgsFromInteraction(interaction, spec);
+
     context.content = `/${commandName} ${args.join(" ")}`.trim();
 
     try {
         await command.execute(context, args);
+
+        const securityCommands = [
+            "lockdown",
+            "unlock",
+            "config",
+            "setupcheck",
+            "securitylogs",
+            "antinuke",
+            "whitelist"
+        ];
+
+        const sub = String(args[0] || "").toLowerCase();
+        const skip =
+            (command.name === "config" &&
+                (!sub || sub === "show")) ||
+            (command.name === "securitylogs" &&
+                (!sub || sub === "info" || sub === "test")) ||
+            (command.name === "antinuke" &&
+                (!sub || sub === "status")) ||
+            (command.name === "whitelist" &&
+                (!sub || sub === "help" || sub === "list"));
+
+        if (securityCommands.includes(command.name) && !skip) {
+            await logConfiguration(interaction.guild, {
+                actor: interaction.user,
+                description: `La commande \`/${commandName}\` a été exécutée.`,
+                fields: [
+                    {
+                        name: "Commande",
+                        value: `\`${context.content}\``
+                    }
+                ]
+            });
+        }
     } catch (error) {
         console.error(`❌ Erreur commande /${commandName}:`, error);
+
         const payload = {
             content: "❌ Une erreur est survenue lors de l'exécution de cette commande."
         };
+
         if (interaction.deferred || interaction.replied) {
-            await interaction.editReply(payload).catch(() => interaction.followUp(payload));
+            await interaction.editReply(payload).catch(() =>
+                interaction.followUp(payload)
+            );
         } else {
             await interaction.reply(payload);
         }
     }
 }
 
+
 client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand()) {
+        return;
+    }
+
     try {
         await runSlashCommand(interaction);
     } catch (error) {
         console.error("❌ Erreur interactionCreate :", error);
     }
 });
+
+
+client.on("guildCreate", async (guild) => {
+    try {
+        await registerGuildSlashCommands(client);
+        await refreshGuildInviteCache(guild);
+    } catch (error) {
+        console.error("❌ Erreur guildCreate :", error);
+    }
+});
+
 
 /*
  * ============================================================
