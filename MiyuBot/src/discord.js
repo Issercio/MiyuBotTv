@@ -88,7 +88,8 @@ const client = new Client({
     ],
     makeCache: Options.cacheWithLimits({
         ...Options.DefaultMakeCacheSettings,
-        MessageManager: 400
+        MessageManager: 400,
+        VoiceStateManager: Infinity
     })
 });
 
@@ -701,7 +702,8 @@ async function findAuditEntry(
             logs.entries.find((item) => {
                 if (
                     targetId &&
-                    item.target?.id !== targetId
+                    item.target?.id &&
+                    item.target.id !== targetId
                 ) {
                     return false;
                 }
@@ -5069,69 +5071,137 @@ client.on(
         newState
     ) => {
         try {
-            if (!newState.guild) {
+            const guild =
+                newState.guild ||
+                oldState.guild ||
+                null;
+
+            if (!guild) {
                 return;
             }
 
-            const member =
+            const userId =
+                newState.id ||
+                oldState.id ||
+                newState.member?.id ||
+                oldState.member?.id ||
+                null;
+
+            if (!userId || userId === client.user?.id) {
+                return;
+            }
+
+            let member =
                 newState.member ||
                 oldState.member ||
+                guild.members.cache.get(userId) ||
                 null;
+
+            if (!member) {
+                try {
+                    member = await guild.members.fetch(userId);
+                } catch (_error) {
+                    member = null;
+                }
+            }
 
             if (member?.user?.bot) {
                 return;
             }
 
-            if (
-                oldState.channelId ===
-                newState.channelId
-            ) {
+            const oldChannelId =
+                oldState.channelId ||
+                oldState.channel?.id ||
+                null;
+
+            const newChannelId =
+                newState.channelId ||
+                newState.channel?.id ||
+                null;
+
+            if (oldChannelId === newChannelId) {
                 return;
             }
 
-            const voiceLabel = (state) => {
-                if (!state?.channelId) {
+            const mention = member
+                ? `${member}`
+                : `<@${userId}>`;
+
+            const voiceLabel = (channelId, state) => {
+                if (!channelId) {
                     return null;
                 }
 
                 const channel =
-                    state.channel ||
-                    state.guild?.channels.cache.get(state.channelId);
+                    state?.channel ||
+                    guild.channels.cache.get(channelId);
 
-                const name = channel?.name || state.channelId;
+                const name = channel?.name || channelId;
 
-                return `<#${state.channelId}> (\`${name}\`)`;
+                return `<#${channelId}> (\`${name}\`)`;
             };
 
-            const fromChannel = voiceLabel(oldState);
-            const toChannel = voiceLabel(newState);
+            const fromChannel = voiceLabel(oldChannelId, oldState);
+            const toChannel = voiceLabel(newChannelId, newState);
+            const target = member || { id: userId };
 
             let title = "Vocal";
             let description = null;
+            let actor = null;
             const fields = [];
 
-            if (!oldState.channelId && newState.channelId) {
+            if (!oldChannelId && newChannelId) {
                 title = "Vocal — join";
-                description =
-                    `${member} a rejoint ${toChannel}.`;
+                description = `${mention} a rejoint ${toChannel}.`;
                 fields.push({
                     name: "Salon rejoint",
                     value: toChannel,
                     inline: false
                 });
-            } else if (oldState.channelId && !newState.channelId) {
-                title = "Vocal — leave";
-                description =
-                    `${member} a quitté ${fromChannel}.`;
+            } else if (oldChannelId && !newChannelId) {
+                const kicked = await findAuditEntry(
+                    guild,
+                    AuditLogEvent.MemberDisconnect,
+                    userId,
+                    8000
+                );
+
+                actor = kicked?.executor || null;
+
+                if (actor && actor.id !== userId) {
+                    title = "Vocal — déconnecté";
+                    description =
+                        `${mention} a été déconnecté de ${fromChannel} par ${actor}.`;
+                } else {
+                    title = "Vocal — leave";
+                    description = `${mention} a quitté ${fromChannel}.`;
+                }
+
                 fields.push({
                     name: "Salon quitté",
                     value: fromChannel,
                     inline: false
                 });
             } else {
-                title = "Vocal — move";
-                description =
-                    `${member} a été déplacé de ${fromChannel} vers ${toChannel}.`;
+                const moved = await findAuditEntry(
+                    guild,
+                    AuditLogEvent.MemberMove,
+                    userId,
+                    8000
+                );
+
+                actor = moved?.executor || null;
+
+                if (actor && actor.id !== userId) {
+                    title = "Vocal — déplacé";
+                    description =
+                        `${mention} a été déplacé de ${fromChannel} vers ${toChannel} par ${actor}.`;
+                } else {
+                    title = "Vocal — move";
+                    description =
+                        `${mention} est passé de ${fromChannel} vers ${toChannel}.`;
+                }
+
                 fields.push(
                     {
                         name: "Salon de départ",
@@ -5147,12 +5217,18 @@ client.on(
             }
 
             await sendSecurityLog(
-                newState.guild,
+                guild,
                 {
                     title,
-                    level: "info",
+                    level: actor && actor.id !== userId
+                        ? "warning"
+                        : "info",
                     description,
-                    target: member,
+                    target,
+                    actor:
+                        actor && actor.id !== userId
+                            ? actor
+                            : null,
                     fields
                 }
             );
