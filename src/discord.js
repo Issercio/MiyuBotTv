@@ -13,7 +13,7 @@ const fs = require("fs");
 const path = require("path");
 
 require("dotenv").config({
-    override: true
+    override: process.env.NODE_ENV !== "production"
 });
 
 const {

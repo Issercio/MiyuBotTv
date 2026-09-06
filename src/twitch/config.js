@@ -26,13 +26,11 @@ function envText(name, fallback = "") {
 function loadTwitchConfig() {
 	const enabled = envFlag("TWITCH_ENABLED", false);
 
-	const username = envText("TWITCH_USERNAME");
+	const username = envText("TWITCH_USERNAME").toLowerCase();
 	const oauthRaw = envText("TWITCH_OAUTH_TOKEN").replace(/^["']+|["']+$/g, "");
 	const channel = envText("TWITCH_CHANNEL").replace(/^#/, "").toLowerCase();
-
-	const oauthToken = oauthRaw
-		? (oauthRaw.toLowerCase().startsWith("oauth:") ? oauthRaw : `oauth:${oauthRaw}`)
-		: "";
+	const oauthSecret = oauthRaw.replace(/^(oauth:)+/i, "").trim();
+	const oauthToken = oauthSecret ? `oauth:${oauthSecret}` : "";
 
 	return {
 		enabled,

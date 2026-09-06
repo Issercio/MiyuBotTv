@@ -237,12 +237,17 @@ async function connectTwitch() {
 	}
 
 	if (hungConnecting || state === "CLOSING") {
-		lastIrcError = "handshake IRC bloqué, reset du socket";
-		console.warn("[TWITCH]", lastIrcError);
-		useIpv4Agent = !useIpv4Agent;
+		const authFail = /login authentication failed/i.test(lastIrcError);
+
+		if (!authFail) {
+			lastIrcError = "handshake IRC bloqué, reset du socket";
+			console.warn("[TWITCH]", lastIrcError);
+			useIpv4Agent = !useIpv4Agent;
+		}
+
 		connectingSince = 0;
 		killSocket();
-		scheduleReconnect(1500);
+		scheduleReconnect(authFail ? 60000 : 1500);
 		return;
 	}
 
@@ -275,9 +280,16 @@ async function connectTwitch() {
 			`[TWITCH] Échec de connexion (essai ${connectAttempt}) :`,
 			lastIrcError
 		);
-		useIpv4Agent = !useIpv4Agent;
+		const authFail = /login authentication failed/i.test(lastIrcError);
+
+		if (!authFail) {
+			useIpv4Agent = !useIpv4Agent;
+		}
+
 		killSocket();
-		scheduleReconnect(Math.min(20000, 2000 * connectAttempt));
+		scheduleReconnect(
+			authFail ? 60000 : Math.min(20000, 2000 * connectAttempt)
+		);
 	}
 }
 
@@ -296,9 +308,11 @@ client.on("connected", (address, port) => {
 client.on("disconnected", (reason) => {
 	connected = false;
 	console.warn(`[TWITCH] Déconnecté : ${reason}`);
+	rememberError(reason);
 
 	if (!shuttingDown) {
-		scheduleReconnect(3000);
+		const authFail = /login authentication failed/i.test(String(reason || ""));
+		scheduleReconnect(authFail ? 60000 : 3000);
 	}
 });
 
@@ -367,6 +381,7 @@ module.exports = {
 	isConnected: () => ircState() === "OPEN",
 	ircState,
 	lastError: () => lastIrcError,
+	botLogin: () => String(config.username || "").toLowerCase(),
 	isLive: () => liveWatcher.isLive(),
 	setDiscordClient,
 	shutdownTwitch
