@@ -5,7 +5,8 @@ const {
     AuditLogEvent,
     PermissionsBitField,
     Partials,
-    ActivityType
+    ActivityType,
+    Options
 } = require("discord.js");
 
 const fs = require("fs");
@@ -73,7 +74,11 @@ const client = new Client({
         Partials.Channel,
         Partials.User,
         Partials.GuildMember
-    ]
+    ],
+    makeCache: Options.cacheWithLimits({
+        ...Options.DefaultMakeCacheSettings,
+        MessageManager: 400
+    })
 });
 
 
@@ -1123,7 +1128,7 @@ async function sendInviteCreateLog(
             guild,
             {
                 title:
-                    "🔗 Invite Created",
+                    "Invitation créée",
 
                 level: "info",
 
@@ -2643,6 +2648,9 @@ client.on(
                 "join",
                 member,
                 {
+                    title: member.user.bot
+                        ? "Bot a rejoint"
+                        : "Membre a rejoint",
                     description:
                         member.user.bot
                             ? "Un bot vient de rejoindre le serveur."
@@ -3879,10 +3887,7 @@ client.on(
                 return;
             }
 
-            if (
-                deletedMessage.author?.id &&
-                deletedMessage.author.id === client.user?.id
-            ) {
+            if (deletedMessage.author?.bot) {
                 return;
             }
 
@@ -3896,11 +3901,19 @@ client.on(
                     )
                     : null;
 
+            const attachmentNames =
+                deletedMessage.attachments?.size
+                    ? [...deletedMessage.attachments.values()]
+                        .map((file) => file.name)
+                        .join(", ")
+                        .slice(0, 800)
+                    : "Aucun";
+
             await sendSecurityLog(
                 deletedMessage.guild,
                 {
                     title:
-                        "Message Deleted",
+                        "Message supprimé",
 
                     level: "danger",
 
@@ -3929,7 +3942,7 @@ client.on(
                             inline: true
                         },
                         {
-                            name: "🧾 Content",
+                            name: "Contenu",
                             value:
                                 formatMessageContent(
                                     deletedMessage.content
@@ -3937,11 +3950,8 @@ client.on(
                             inline: false
                         },
                         {
-                            name: "📎 Attachments",
-                            value: String(
-                                deletedMessage.attachments
-                                    ?.size || 0
-                            ),
+                            name: "📎 Pièces jointes",
+                            value: attachmentNames,
                             inline: true
                         }
                     ]
@@ -3992,15 +4002,17 @@ client.on(
                 return;
             }
 
+            if (updatedMessage.author?.bot) {
+                return;
+            }
+
             const oldContent =
                 previousMessage.content || "";
 
             const newContent =
                 updatedMessage.content || "";
 
-            if (
-                oldContent === newContent
-            ) {
+            if (oldContent === newContent) {
                 return;
             }
 
@@ -4008,7 +4020,7 @@ client.on(
                 updatedMessage.guild,
                 {
                     title:
-                        "Message Edited",
+                        "Message modifié",
 
                     level: "info",
 
@@ -4033,7 +4045,7 @@ client.on(
                             inline: true
                         },
                         {
-                            name: "⬅️ Before",
+                            name: "Avant",
                             value:
                                 formatMessageContent(
                                     oldContent
@@ -4041,7 +4053,7 @@ client.on(
                             inline: false
                         },
                         {
-                            name: "➡️ After",
+                            name: "Après",
                             value:
                                 formatMessageContent(
                                     newContent
@@ -4800,6 +4812,17 @@ client.on(
                 oldState.member ||
                 null;
 
+            if (member?.user?.bot) {
+                return;
+            }
+
+            if (
+                oldState.channelId ===
+                newState.channelId
+            ) {
+                return;
+            }
+
             const oldChannelValue =
                 oldState.channelId
                     ? `<#${oldState.channelId}>`
@@ -4810,104 +4833,36 @@ client.on(
                     ? `<#${newState.channelId}>`
                     : "Aucun";
 
-            let title =
-                "🎙️ Voice State Updated";
-
-            let level =
-                "info";
-
+            let title = "Vocal";
             let description = null;
 
-            const fields = [];
-
-            if (
-                oldState.channelId !==
-                newState.channelId
-            ) {
-                if (!oldState.channelId && newState.channelId) {
-                    title =
-                        "🔊 Voice Channel Joined";
-                    description =
-                        "A member joined a voice channel.";
-                } else if (oldState.channelId && !newState.channelId) {
-                    title =
-                        "🔇 Voice Channel Left";
-                    description =
-                        "A member left a voice channel.";
-                } else {
-                    title =
-                        "🔁 Voice Channel Moved";
-                    description =
-                        "A member moved between voice channels.";
-                }
-
-                fields.push({
-                    name: "🔊 Voice Channel",
-                    value:
-                        `${oldChannelValue} → ${newChannelValue}`,
-                    inline: false
-                });
-            }
-
-            if (
-                oldState.serverMute !==
-                newState.serverMute
-            ) {
-                fields.push({
-                    name: "🔇 Server Mute",
-                    value:
-                        newState.serverMute
-                            ? "Enabled"
-                            : "Disabled",
-                    inline: true
-                });
-            }
-
-            if (
-                oldState.serverDeaf !==
-                newState.serverDeaf
-            ) {
-                fields.push({
-                    name: "🙉 Server Deaf",
-                    value:
-                        newState.serverDeaf
-                            ? "Enabled"
-                            : "Disabled",
-                    inline: true
-                });
-            }
-
-            if (
-                oldState.selfVideo !==
-                newState.selfVideo
-            ) {
-                fields.push({
-                    name: "📹 Camera",
-                    value:
-                        newState.selfVideo
-                            ? "Enabled"
-                            : "Disabled",
-                    inline: true
-                });
-            }
-
-            if (fields.length === 0) {
-                return;
+            if (!oldState.channelId && newState.channelId) {
+                title = "Vocal rejoint";
+                description = `${member} a rejoint ${newChannelValue}.`;
+            } else if (oldState.channelId && !newState.channelId) {
+                title = "Vocal quitté";
+                description = `${member} a quitté ${oldChannelValue}.`;
+            } else {
+                title = "Vocal déplacé";
+                description =
+                    `${member} : ${oldChannelValue} → ${newChannelValue}`;
             }
 
             await sendSecurityLog(
                 newState.guild,
                 {
                     title,
-
-                    level,
-
+                    level: "info",
                     description,
-
-                    target:
-                        member,
-
-                    fields
+                    target: member,
+                    fields: [
+                        {
+                            name: "Salon",
+                            value:
+                                `${oldChannelValue} → ${newChannelValue}`,
+                            inline: false
+                        }
+                    ]
                 }
             );
         } catch (error) {
