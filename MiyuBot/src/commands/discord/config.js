@@ -393,27 +393,27 @@ async function showConfig(message) {
             .addFields({
                 name: "📖 Commandes de configuration",
                 value:
-                    "`!config show`\n" +
-                    "`!config lockdown on/off`\n" +
-                    "`!config raid on/off`\n" +
-                    "`!config raid threshold <nombre>`\n" +
-                    "`!config raid window <secondes>`\n" +
-                    "`!config spam on/off`\n" +
-                    "`!config spam threshold <nombre>`\n" +
-                    "`!config spam window <secondes>`\n" +
-                    "`!config spam sanction <ban|kick|timeout>`\n" +
-                    "`!config bot on/off`\n" +
-                    "`!config antinuke on/off`\n" +
-                    "`!config antinuke threshold <nombre>`\n" +
-                        "`!config antinuke threshold <channel|role|webhook|ban> <nombre>`\n" +
-                    "`!config antinuke window <secondes>`\n" +
-                    "`!config antinuke sanction <ban|kick|timeout>`\n" +
-                        "`!config quarantine on/off`\n" +
-                        "`!config quarantine role @role`\n" +
-                        "`!config quarantine age <jours>`\n" +
-                    "`!config age <jours>`\n" +
-                    "`!config logs #salon`\n" +
-                    "`!config logs off`"
+                    "`/config show`\n" +
+                    "`/config lockdown on/off`\n" +
+                    "`/config raid on/off`\n" +
+                    "`/config raid threshold <nombre>`\n" +
+                    "`/config raid window <secondes>`\n" +
+                    "`/config spam on/off`\n" +
+                    "`/config spam threshold <nombre>`\n" +
+                    "`/config spam window <secondes>`\n" +
+                    "`/config spam sanction <ban|kick|timeout>`\n" +
+                    "`/config bot on/off`\n" +
+                    "`/config antinuke on/off`\n" +
+                    "`/config antinuke threshold <nombre>`\n" +
+                        "`/config antinuke threshold <channel|role|webhook|ban> <nombre>`\n" +
+                    "`/config antinuke window <secondes>`\n" +
+                    "`/config antinuke sanction <ban|kick|timeout>`\n" +
+                        "`/config quarantine on/off`\n" +
+                        "`/config quarantine role @role`\n" +
+                        "`/config quarantine age <jours>`\n" +
+                    "`/config age <jours>`\n" +
+                    "`/config logs #salon`\n" +
+                    "`/config logs off`"
             })
             .setFooter({
                 text:
@@ -445,69 +445,69 @@ async function showHelp(message) {
                 {
                     name: "📊 Afficher la configuration",
                     value:
-                        "`!config show`"
+                        "`/config show`"
                 },
                 {
                     name: "🔒 Lockdown automatique",
                     value:
-                        "`!config lockdown on`\n" +
-                        "`!config lockdown off`"
+                        "`/config lockdown on`\n" +
+                        "`/config lockdown off`"
                 },
                 {
                     name: "🚨 Anti-Raid",
                     value:
-                        "`!config raid on`\n" +
-                        "`!config raid off`\n" +
-                        "`!config raid threshold 10`\n" +
-                        "`!config raid window 15`"
+                        "`/config raid on`\n" +
+                        "`/config raid off`\n" +
+                        "`/config raid threshold 10`\n" +
+                        "`/config raid window 15`"
                 },
                 {
                     name: "💬 Anti-Spam",
                     value:
-                        "`!config spam on`\n" +
-                        "`!config spam off`\n" +
-                        "`!config spam threshold 6`\n" +
-                        "`!config spam window 8`\n" +
-                        "`!config spam sanction ban`"
+                        "`/config spam on`\n" +
+                        "`/config spam off`\n" +
+                        "`/config spam threshold 6`\n" +
+                        "`/config spam window 8`\n" +
+                        "`/config spam sanction ban`"
                 },
                 {
                     name: "🤖 Anti-Bot",
                     value:
-                        "`!config bot on`\n" +
-                        "`!config bot off`"
+                        "`/config bot on`\n" +
+                        "`/config bot off`"
                 },
                 {
                     name: "🧨 Anti-Nuke",
                     value:
-                        "`!config antinuke on`\n" +
-                        "`!config antinuke off`\n" +
-                        "`!config antinuke threshold 3`\n" +
-                        "`!config antinuke threshold channel 3`\n" +
-                        "`!config antinuke threshold role 3`\n" +
-                        "`!config antinuke threshold webhook 2`\n" +
-                        "`!config antinuke threshold ban 3`\n" +
-                        "`!config antinuke window 15`\n" +
-                        "`!config antinuke sanction ban`"
+                        "`/config antinuke on`\n" +
+                        "`/config antinuke off`\n" +
+                        "`/config antinuke threshold 3`\n" +
+                        "`/config antinuke threshold channel 3`\n" +
+                        "`/config antinuke threshold role 3`\n" +
+                        "`/config antinuke threshold webhook 2`\n" +
+                        "`/config antinuke threshold ban 3`\n" +
+                        "`/config antinuke window 15`\n" +
+                        "`/config antinuke sanction ban`"
                 },
                 {
                     name: "🧪 Quarantaine",
                     value:
-                        "`!config quarantine on`\n" +
-                        "`!config quarantine off`\n" +
-                        "`!config quarantine role @quarantaine`\n" +
-                        "`!config quarantine age 7`"
+                        "`/config quarantine on`\n" +
+                        "`/config quarantine off`\n" +
+                        "`/config quarantine role @quarantaine`\n" +
+                        "`/config quarantine age 7`"
                 },
                 {
                     name: "🆕 Âge minimum",
                     value:
-                        "`!config age 7`\n" +
-                        "`!config age 0` pour désactiver"
+                        "`/config age 7`\n" +
+                        "`/config age 0` pour désactiver"
                 },
                 {
                     name: "📜 Logs de sécurité",
                     value:
-                        "`!config logs #logs-securite`\n" +
-                        "`!config logs off`"
+                        "`/config logs #logs-securite`\n" +
+                        "`/config logs off`"
                 }
             )
             .setFooter({
@@ -723,11 +723,11 @@ module.exports = {
 
             return message.reply(
                 "❌ Utilisation :\n" +
-                "`!config antinuke on/off`\n" +
-                "`!config antinuke threshold <nombre>`\n" +
-                "`!config antinuke threshold <channel|role|webhook|ban> <nombre>`\n" +
-                "`!config antinuke window <secondes>`\n" +
-                "`!config antinuke sanction <ban|kick|timeout>`"
+                "`/config antinuke on/off`\n" +
+                "`/config antinuke threshold <nombre>`\n" +
+                "`/config antinuke threshold <channel|role|webhook|ban> <nombre>`\n" +
+                "`/config antinuke window <secondes>`\n" +
+                "`/config antinuke sanction <ban|kick|timeout>`"
             );
         }
 
@@ -763,7 +763,7 @@ module.exports = {
                 value !== "off"
             ) {
                 return message.reply(
-                    "❌ Utilisation : `!config lockdown on/off`"
+                    "❌ Utilisation : `/config lockdown on/off`"
                 );
             }
 
@@ -975,9 +975,9 @@ module.exports = {
 
             return message.reply(
                 "❌ Utilisation :\n" +
-                "`!config raid on/off`\n" +
-                "`!config raid threshold <nombre>`\n" +
-                "`!config raid window <secondes>`"
+                "`/config raid on/off`\n" +
+                "`/config raid threshold <nombre>`\n" +
+                "`/config raid window <secondes>`"
             );
         }
 
@@ -1118,10 +1118,10 @@ module.exports = {
 
             return message.reply(
                 "❌ Utilisation :\n" +
-                "`!config spam on/off`\n" +
-                "`!config spam threshold <nombre>`\n" +
-                "`!config spam window <secondes>`\n" +
-                "`!config spam sanction <ban|kick|timeout>`"
+                "`/config spam on/off`\n" +
+                "`/config spam threshold <nombre>`\n" +
+                "`/config spam window <secondes>`\n" +
+                "`/config spam sanction <ban|kick|timeout>`"
             );
         }
 
@@ -1140,7 +1140,7 @@ module.exports = {
                 value !== "off"
             ) {
                 return message.reply(
-                    "❌ Utilisation : `!config bot on/off`"
+                    "❌ Utilisation : `/config bot on/off`"
                 );
             }
 
@@ -1215,7 +1215,7 @@ module.exports = {
 
                 if (!role) {
                     return message.reply(
-                        "❌ Utilisation : `!config quarantine role @role`"
+                        "❌ Utilisation : `/config quarantine role @role`"
                     );
                 }
 
@@ -1258,9 +1258,9 @@ module.exports = {
 
             return message.reply(
                 "❌ Utilisation :\n" +
-                "`!config quarantine on/off`\n" +
-                "`!config quarantine role @role`\n" +
-                "`!config quarantine age <jours>`"
+                "`/config quarantine on/off`\n" +
+                "`/config quarantine role @role`\n" +
+                "`/config quarantine age <jours>`"
             );
         }
 
@@ -1332,7 +1332,7 @@ module.exports = {
 
             if (!channelArg) {
                 return message.reply(
-                    "❌ Utilisation : `!config logs #salon` ou `!config logs off`"
+                    "❌ Utilisation : `/config logs #salon` ou `/config logs off`"
                 );
             }
 
@@ -1374,7 +1374,7 @@ module.exports = {
             if (!channel) {
                 return message.reply(
                     "❌ Mentionne un salon valide.\n\n" +
-                    "Exemple : `!config logs #logs-securite`"
+                    "Exemple : `/config logs #logs-securite`"
                 );
             }
 
@@ -1424,7 +1424,7 @@ module.exports = {
 
         return message.reply(
             "❌ Option inconnue.\n\n" +
-            "Utilise `!config` pour voir toutes les options."
+            "Utilise `/config` pour voir toutes les options."
         );
     }
 };

@@ -44,6 +44,17 @@ const {
     logConfiguration
 } = require("./security/securityLogger");
 
+const {
+    wrapInteraction,
+    buildArgsFromInteraction
+} = require("./discord/commandContext");
+
+const {
+    registerGuildSlashCommands
+} = require("./discord/slashRegister");
+
+const slashDefinitions = require("./discord/slashDefinitions");
+
 
 /*
  * ============================================================
@@ -5207,6 +5218,11 @@ client.on(
             return;
         }
 
+        return message.reply(
+            "MiyuBot utilise maintenant les commandes **slash**.\n" +
+            "Tape `/` puis choisis une commande (`/help`, `/ping`, `/ban`…)."
+        );
+
         const args =
             message.content
                 .slice(prefix.length)
@@ -5398,6 +5414,77 @@ client.on(
 );
 
 
+    }
+);
+
+
+async function runSlashCommand(interaction) {
+    const commandName = interaction.commandName;
+    const command = client.commands.get(commandName);
+
+    if (!command) {
+        return interaction.reply({
+            content: "Commande inconnue.",
+            ephemeral: true
+        });
+    }
+
+    const claimed = await claimCommand(`discord-slash:${interaction.id}`);
+    if (!claimed) return;
+
+    const isAdmin =
+        Boolean(interaction.member) &&
+        interaction.member.permissions.has(PermissionsBitField.Flags.Administrator);
+
+    const publicCommands = ["help", "ping", "userinfo"];
+
+    if (!publicCommands.includes(command.name)) {
+        if (command.permission) {
+            if (!isAdmin && (!interaction.member || !interaction.member.permissions.has(command.permission))) {
+                return interaction.reply({
+                    content: "❌ Il te manque la permission pour cette commande.",
+                    ephemeral: true
+                });
+            }
+        } else if (!isAdmin) {
+            return interaction.reply({
+                content: "❌ Cette commande est réservée aux administrateurs.",
+                ephemeral: true
+            });
+        }
+    }
+
+    await interaction.deferReply();
+
+    const context = wrapInteraction(interaction);
+    const spec = slashDefinitions[commandName] || {};
+    const args = buildArgsFromInteraction(interaction, spec);
+    context.content = `/${commandName} ${args.join(" ")}`.trim();
+
+    try {
+        await command.execute(context, args);
+    } catch (error) {
+        console.error(`❌ Erreur commande /${commandName}:`, error);
+        const payload = {
+            content: "❌ Une erreur est survenue lors de l'exécution de cette commande."
+        };
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply(payload).catch(() => interaction.followUp(payload));
+        } else {
+            await interaction.reply(payload);
+        }
+    }
+}
+
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    try {
+        await runSlashCommand(interaction);
+    } catch (error) {
+        console.error("❌ Erreur interactionCreate :", error);
+    }
+});
+
 /*
  * ============================================================
  * BOT PRÊT
@@ -5445,10 +5532,19 @@ client.once(
                 "🗄️ Base de données prête."
             );
 
+            try {
+                await registerGuildSlashCommands(client);
+            } catch (error) {
+                console.error(
+                    "❌ Impossible d'enregistrer les commandes slash :",
+                    error
+                );
+            }
+
             client.user.setPresence({
                 activities: [
                     {
-                        name: "!help • sécurité",
+                        name: "/help • sécurité",
                         type: ActivityType.Watching
                     }
                 ],

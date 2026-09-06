@@ -28,7 +28,7 @@ module.exports = {
         const { member, user } = await resolveMember(message, args.shift());
 
         if (!member || !user) {
-            return message.reply("Usage : `!timeout @membre [durée] [raison]`\nExemple : `!timeout @user 10m spam`");
+            return message.reply("Usage : `/timeout` + membre + durée");
         }
 
         const hierarchy = canActOn(message.member, member);

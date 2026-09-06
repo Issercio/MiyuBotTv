@@ -39,9 +39,9 @@ module.exports = {
         if (!sub || sub === "help") {
             return message.reply(
                 "📋 Commandes whitelist:\n" +
-                "!whitelist add @user [raison]\n" +
-                "!whitelist remove @user\n" +
-                "!whitelist list"
+                "/whitelist add @user [raison]\n" +
+                "/whitelist remove @user\n" +
+                "/whitelist list"
             );
         }
 
@@ -50,7 +50,7 @@ module.exports = {
             const userId = parseUserId(userArg || "");
 
             if (!userId) {
-                return message.reply("❌ Utilisation: !whitelist add @user [raison]");
+                return message.reply("❌ Utilisation: /whitelist add @user [raison]");
             }
 
             const reason = args.join(" ").trim() || "Aucune raison précisée";
@@ -83,7 +83,7 @@ module.exports = {
             const userId = parseUserId(userArg || "");
 
             if (!userId) {
-                return message.reply("❌ Utilisation: !whitelist remove @user");
+                return message.reply("❌ Utilisation: /whitelist remove @user");
             }
 
             const result = await run(
@@ -135,6 +135,6 @@ module.exports = {
             return message.reply({ embeds: [embed] });
         }
 
-        return message.reply("❌ Sous-commande inconnue. Utilise !whitelist help");
+        return message.reply("❌ Sous-commande inconnue. Utilise /whitelist help");
     }
 };

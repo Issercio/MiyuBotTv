@@ -61,25 +61,25 @@ module.exports = {
                         {
                             name: "📁 Créer le salon",
                             value:
-                                "`!securitylogs create`",
+                                "`/securitylogs create`",
                             inline: false
                         },
                         {
                             name: "🧪 Tester les logs",
                             value:
-                                "`!securitylogs test`",
+                                "`/securitylogs test`",
                             inline: false
                         },
                         {
                             name: "🔌 Désactiver",
                             value:
-                                "`!securitylogs off`",
+                                "`/securitylogs off`",
                             inline: false
                         },
                         {
                             name: "ℹ️ Informations",
                             value:
-                                "`!securitylogs info`",
+                                "`/securitylogs info`",
                             inline: false
                         }
                     )
@@ -407,7 +407,7 @@ module.exports = {
                 !settings.security_log_channel_id
             ) {
                 return message.reply(
-                    "❌ Aucun salon de logs n'est configuré.\n\nUtilise `!securitylogs create`."
+                    "❌ Aucun salon de logs n'est configuré.\n\nUtilise `/securitylogs create`."
                 );
             }
 
@@ -418,7 +418,7 @@ module.exports = {
 
             if (!channel) {
                 return message.reply(
-                    "❌ Le salon configuré n'existe plus.\n\nUtilise `!securitylogs create`."
+                    "❌ Le salon configuré n'existe plus.\n\nUtilise `/securitylogs create`."
                 );
             }
 
@@ -619,7 +619,7 @@ module.exports = {
 
         return message.reply(
             "❌ Sous-commande inconnue.\n\n" +
-            "Utilise `!securitylogs` pour voir les commandes disponibles."
+            "Utilise `/securitylogs` pour voir les commandes disponibles."
         );
     }
 };

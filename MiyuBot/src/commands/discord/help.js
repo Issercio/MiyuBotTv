@@ -17,53 +17,34 @@ module.exports = {
             Boolean(message.member) &&
             (
                 isAdmin ||
-                message.member.permissions.has(
-                    PermissionFlagsBits.KickMembers
-                ) ||
-                message.member.permissions.has(
-                    PermissionFlagsBits.BanMembers
-                ) ||
-                message.member.permissions.has(
-                    PermissionFlagsBits.ModerateMembers
-                ) ||
-                message.member.permissions.has(
-                    PermissionFlagsBits.ManageMessages
-                )
+                message.member.permissions.has(PermissionFlagsBits.KickMembers) ||
+                message.member.permissions.has(PermissionFlagsBits.BanMembers) ||
+                message.member.permissions.has(PermissionFlagsBits.ModerateMembers) ||
+                message.member.permissions.has(PermissionFlagsBits.ManageMessages)
             );
 
-        const publicCommands =
+        let text =
             "**Général**\n" +
-            "`!ping` — Vérifie si MiyuBot répond\n" +
-            "`!help` — Cette liste\n" +
-            "`!userinfo [@membre]` — Fiche membre";
-
-        let text = publicCommands;
+            "`/ping` — Vérifie si MiyuBot répond\n" +
+            "`/help` — Cette liste\n" +
+            "`/userinfo` — Fiche membre";
 
         if (canMod) {
             text +=
                 "\n\n**Modération**\n" +
-                "`!ban @membre [raison]`\n" +
-                "`!unban <id> [raison]`\n" +
-                "`!kick @membre [raison]`\n" +
-                "`!timeout @membre [durée] [raison]` (`!mute`)\n" +
-                "`!untimeout @membre` (`!unmute`)\n" +
-                "`!warn @membre [raison]`\n" +
-                "`!warnings @membre`\n" +
-                "`!softban @membre [raison]` — purge 24h sans ban définitif\n" +
-                "`!nick @membre [pseudo|reset]`\n" +
-                "`!purge 1-100` (`!clear`)\n" +
-                "`!slowmode <secondes>`";
+                "`/ban` `/unban` `/kick` `/softban`\n" +
+                "`/timeout` (`/mute`) `/untimeout` (`/unmute`)\n" +
+                "`/warn` `/warnings` `/nick` `/purge` `/slowmode`";
         }
 
         if (isAdmin) {
             text +=
                 "\n\n**Sécurité (admin)**\n" +
-                "`!config` — Raid, nuke, spam, quarantaine\n" +
-                "`!securitylogs` — Salon de logs Dyno / Wick\n" +
-                "`!lockdown` / `!unlock`\n" +
-                "`!antinuke` / `!whitelist`\n" +
-                "`!cases` — Dossiers de modération\n" +
-                "`!setupcheck` — Vérification du serveur";
+                "`/config` — Raid, nuke, spam, quarantaine, âge\n" +
+                "`/securitylogs` — Salon de logs\n" +
+                "`/lockdown` `/unlock`\n" +
+                "`/antinuke` `/whitelist`\n" +
+                "`/cases` `/setupcheck` `/syncmembers`";
         }
 
         return message.reply(text);

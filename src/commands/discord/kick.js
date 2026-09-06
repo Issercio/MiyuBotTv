@@ -23,7 +23,7 @@ module.exports = {
         const { member, user } = await resolveMember(message, args.shift());
 
         if (!member || !user) {
-            return message.reply("Usage : `!kick @membre [raison]`");
+            return message.reply("Usage : `/kick` + membre");
         }
 
         const hierarchy = canActOn(message.member, member);

@@ -83,6 +83,39 @@ fly deploy
 
 Évite les plans gratuits qui mettent le process en sommeil : le bot Twitch doit rester connecté en IRC.
 
+## Discord — commandes (slash)
+
+Tape `/` dans Discord. Les anciennes commandes `!` affichent un rappel.
+
+**Général**
+- `/ping` `/help` `/userinfo`
+
+**Modération**
+- `/ban` `/unban` `/kick` `/softban`
+- `/timeout` (`/mute`) `/untimeout` (`/unmute`)
+- `/warn` `/warnings` `/nick` `/purge` `/slowmode`
+
+**Sécurité**
+- `/securitylogs` — `create`, `info`, `test`, `off` (champ `action`)
+- `/config` — champ `parametres` : `show`, `age 30`, `raid on`, `logs off`…
+- `/lockdown` `/unlock`
+- `/antinuke` `/whitelist` `/cases` `/setupcheck`
+
+Préset communauté (~50 membres, évolutif) : `/securitylogs create`  
+→ logs + anti-raid/spam/nuke + kick des comptes de moins de 30 jours.
+
+## Discord — vérif production
+
+```text
+/setupcheck
+/config parametres:show
+/securitylogs action:test
+/cases action:recent
+```
+
+Intents portail Discord : **Server Members** + **Message Content**.  
+Le bot a besoin de **Gérer le serveur** pour les invitations.
+
 ## Twitch — commandes
 
 Publiques :
@@ -102,15 +135,6 @@ Modos / broadcaster :
 Automod (viewers) : spam, répétitions, caps, liens (clips/YouTube autorisés). Les modos sont ignorés.
 
 Annonce live Discord : `TWITCH_DISCORD_LIVE_CHANNEL_ID` + Helix.
-
-## Discord — vérif production
-
-```text
-!setupcheck
-!config show
-!securitylogs test
-!cases recent 10
-```
 
 ## Sécurité
 

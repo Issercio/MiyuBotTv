@@ -138,11 +138,11 @@ module.exports = {
                     {
                         name: "Commandes",
                         value:
-                            "!antinuke on/off\n" +
-                            "!antinuke threshold <nombre>\n" +
-                            "!antinuke window <secondes>\n" +
-                            "!antinuke sanction <ban|kick|timeout>\n" +
-                            "!antinuke status"
+                            "/antinuke on/off\n" +
+                            "/antinuke threshold <nombre>\n" +
+                            "/antinuke window <secondes>\n" +
+                            "/antinuke sanction <ban|kick|timeout>\n" +
+                            "/antinuke status"
                     }
                 )
                 .setTimestamp();
@@ -207,11 +207,11 @@ module.exports = {
 
         return message.reply(
             "❌ Utilisation:\n" +
-            "!antinuke on/off\n" +
-            "!antinuke threshold <nombre>\n" +
-            "!antinuke window <secondes>\n" +
-            "!antinuke sanction <ban|kick|timeout>\n" +
-            "!antinuke status"
+            "/antinuke on/off\n" +
+            "/antinuke threshold <nombre>\n" +
+            "/antinuke window <secondes>\n" +
+            "/antinuke sanction <ban|kick|timeout>\n" +
+            "/antinuke status"
         );
     }
 };

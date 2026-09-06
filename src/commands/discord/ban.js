@@ -23,7 +23,7 @@ module.exports = {
         const { member, user, userId } = await resolveMember(message, args.shift());
 
         if (!userId || !user) {
-            return message.reply("Usage : `!ban @membre [raison]`");
+            return message.reply("Usage : `/ban` + membre");
         }
 
         if (member) {
