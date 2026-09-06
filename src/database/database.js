@@ -945,6 +945,19 @@ async function initializeDatabase() {
         );
 
 
+        await run(
+            `
+            CREATE TABLE IF NOT EXISTS command_claims (
+
+                message_id TEXT PRIMARY KEY,
+
+                claimed_at INTEGER NOT NULL
+
+            )
+            `
+        );
+
+
         console.log(
             "📋 Tables MiyuBot vérifiées et prêtes !"
         );
@@ -963,10 +976,59 @@ const databaseReady =
     initializeDatabase();
 
 
+async function claimCommand(messageId) {
+    if (!messageId) {
+        return true;
+    }
+
+    try {
+        await databaseReady;
+
+        await run(
+            `
+            DELETE FROM command_claims
+            WHERE claimed_at < ?
+            `,
+            [Date.now() - 15 * 60 * 1000]
+        );
+
+        await run(
+            `
+            INSERT INTO command_claims (
+                message_id,
+                claimed_at
+            )
+            VALUES (?, ?)
+            `,
+            [String(messageId), Date.now()]
+        );
+
+        return true;
+    } catch (error) {
+        const text = String(error && error.message || error);
+
+        if (
+            text.includes("UNIQUE") ||
+            text.includes("constraint")
+        ) {
+            return false;
+        }
+
+        console.warn(
+            "⚠️ claimCommand :",
+            text
+        );
+
+        return true;
+    }
+}
+
+
 module.exports = {
     db,
     run,
     get,
     all,
-    databaseReady
+    databaseReady,
+    claimCommand
 };

@@ -17,7 +17,8 @@ require("dotenv").config({
 const {
     run,
     get,
-    databaseReady
+    databaseReady,
+    claimCommand
 } = require("./database/database");
 
 const {
@@ -141,6 +142,7 @@ const recentInviteCreateLogs = new Map();
 const inviteCreateLogsInFlight = new Set();
 const CACHE_SWEEP_INTERVAL_MS = 10 * 60 * 1000;
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
+const claimedCommandIds = new Set();
 
 /*
  * ============================================================
@@ -4887,6 +4889,25 @@ client.on(
                 .replace(/[.,;:!?]+$/, "");
 
         if (!commandName) {
+            return;
+        }
+
+        if (claimedCommandIds.has(message.id)) {
+            return;
+        }
+
+        claimedCommandIds.add(message.id);
+
+        if (claimedCommandIds.size > 3000) {
+            const oldest = claimedCommandIds.values().next().value;
+            claimedCommandIds.delete(oldest);
+        }
+
+        const claimed = await claimCommand(
+            `discord:${message.id}`
+        );
+
+        if (!claimed) {
             return;
         }
 

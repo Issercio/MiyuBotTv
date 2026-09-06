@@ -1,7 +1,8 @@
 const {
 	run,
 	get,
-	all
+	all,
+	claimCommand
 } = require("../database/database");
 
 const { isPrivileged } = require("./automod");
@@ -423,6 +424,16 @@ function createCommandRouter({
 		const commandName = String(rawName || "").toLowerCase();
 
 		if (!commandName) {
+			return;
+		}
+
+		const twitchMessageId = tags.id
+			? `twitch:${tags.id}`
+			: `twitch:${channel}:${tags.username}:${commandName}:${text}`;
+
+		const claimed = await claimCommand(twitchMessageId);
+
+		if (!claimed) {
 			return;
 		}
 
