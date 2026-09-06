@@ -83,6 +83,8 @@ describe("batterie Twitch", () => {
         assert.match(commands, /sentiers lumineux/);
         assert.match(commands, /sanctuaire de Kitsunara/);
         assert.match(commands, /sociallinks\.edgeone\.dev/);
+        assert.match(commands, /discord\.com\/invite/);
+        assert.match(read("src/twitch/chatQueue.js"), /chat say timeout/);
     });
 
     test("alerte pubs auto 30s", () => {
@@ -99,5 +101,7 @@ describe("batterie Twitch", () => {
         const nestedCmd = read("MiyuBot/src/twitch/commands.js");
         assert.match(nestedAds, /pub automatique va se lancer/);
         assert.match(nestedCmd, /sentiers lumineux/);
+        assert.match(nestedCmd, /discord\.com\/invite/);
+        assert.match(read("MiyuBot/src/twitch/chatQueue.js"), /chat say timeout/);
     });
 });

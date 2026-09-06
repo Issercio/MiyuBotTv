@@ -1,3 +1,22 @@
+const SAY_TIMEOUT_MS = 4000;
+
+function withTimeout(promise, ms, label) {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => reject(new Error(label)), ms);
+
+		promise.then(
+			(value) => {
+				clearTimeout(timer);
+				resolve(value);
+			},
+			(error) => {
+				clearTimeout(timer);
+				reject(error);
+			}
+		);
+	});
+}
+
 function createChatQueue(client, delayMs) {
 	let chain = Promise.resolve();
 	let lastSentAt = 0;
@@ -29,7 +48,11 @@ function createChatQueue(client, delayMs) {
 		}
 
 		return enqueue(async () => {
-			await client.say(channel, text);
+			await withTimeout(
+				Promise.resolve(client.say(channel, text)),
+				SAY_TIMEOUT_MS,
+				"chat say timeout"
+			);
 			return true;
 		});
 	}

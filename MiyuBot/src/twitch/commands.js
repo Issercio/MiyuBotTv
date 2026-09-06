@@ -38,6 +38,19 @@ function parseArgs(raw) {
 	return String(raw || "").trim().split(/\s+/).filter(Boolean);
 }
 
+function publicDiscordInvite(raw) {
+	const value = String(raw || "").trim();
+	const match = value.match(
+		/(?:discord\.gg|discord\.com\/invite)\/([A-Za-z0-9-]+)/i
+	);
+
+	if (match) {
+		return `https://discord.com/invite/${match[1]}`;
+	}
+
+	return value || "https://discord.com/invite/7KyxTPEwXv";
+}
+
 function createCommandRouter({
 	config,
 	client,
@@ -141,15 +154,13 @@ function createCommandRouter({
 		}
 
 		if (commandName === "discord") {
-			const invite =
-				config.discordInvite ||
-				"https://discord.gg/7KyxTPEwXv";
+			const invite = publicDiscordInvite(config.discordInvite);
 
 			await queue.say(
 				channel,
 				"Rejoins le sanctuaire de Kitsunara sur Discord ! " +
-				"Papotages, créations, chill et bonne humeur t’attendent " +
-				`sous les cerisiers 🌸🎐 → ${invite}`
+				"Papotages, creations, chill et bonne humeur t'attendent " +
+				`sous les cerisiers → ${invite}`
 			);
 			return;
 		}

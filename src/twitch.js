@@ -136,14 +136,7 @@ client.on("notice", (channel, msgid, message) => {
 		return;
 	}
 
-	if (
-		msgid.includes("auth") ||
-		msgid.includes("login") ||
-		msgid === "msg_banned" ||
-		msgid === "msg_channel_suspended"
-	) {
-		console.error(`[TWITCH] Notice ${msgid} : ${message}`);
-	}
+	console.warn(`[TWITCH] Notice ${msgid} : ${message}`);
 });
 
 client.on("message", async (channel, tags, message, self) => {
