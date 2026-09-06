@@ -131,7 +131,7 @@ function createCommandRouter({
 		if (commandName === "socials") {
 			const socialsUrl =
 				config.socialsUrl ||
-				"https://sociallinks.edgeone.dev";
+				"https://socials-links.fr";
 
 			await queue.say(
 				channel,

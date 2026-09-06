@@ -49,7 +49,7 @@ function loadTwitchConfig() {
 		tiktok: envText("TWITCH_TIKTOK"),
 		socialsUrl: envText(
 			"TWITCH_SOCIALS_URL",
-			"https://sociallinks.edgeone.dev"
+			"https://socials-links.fr"
 		),
 		adsToken: envText("TWITCH_ADS_TOKEN").replace(/^oauth:/i, ""),
 		adWarningSeconds: Math.max(5, envNumber("TWITCH_AD_WARNING_SECONDS", 30) || 30),
