@@ -1,4 +1,5 @@
 const dns = require("dns");
+const https = require("https");
 const tmi = require("tmi.js");
 
 if (typeof dns.setDefaultResultOrder === "function") {
@@ -60,7 +61,12 @@ let connectAttempt = 0;
 let reconnectTimer = null;
 let connectingSince = 0;
 let lastIrcError = "";
-let ipv4Only = true;
+let useIpv4Agent = true;
+
+const ipv4Agent = new https.Agent({
+	family: 4,
+	keepAlive: false
+});
 
 const client = new tmi.Client({
 	options: {
@@ -72,7 +78,13 @@ const client = new tmi.Client({
 			console.warn("[TWITCH]", message);
 		},
 		error: (message) => {
-			lastIrcError = String(message || "erreur irc").slice(0, 180);
+			const text = String(message || "erreur irc");
+
+			if (text.includes("Cannot disconnect")) {
+				return;
+			}
+
+			lastIrcError = text.slice(0, 180);
 			console.error("[TWITCH]", lastIrcError);
 		}
 	},
@@ -154,24 +166,34 @@ function applyDnsFamily() {
 		return;
 	}
 
-	dns.setDefaultResultOrder(ipv4Only ? "ipv4first" : "verbatim");
+	dns.setDefaultResultOrder(useIpv4Agent ? "ipv4first" : "verbatim");
 }
 
-function forceCloseIrc() {
-	try {
-		const socket = client.ws;
-
-		if (socket && typeof socket.terminate === "function") {
-			socket.terminate();
-		} else if (socket && typeof socket.close === "function") {
-			socket.close();
-		}
-	} catch (error) {
-		rememberError(error);
+function applyConnectionAgent() {
+	if (useIpv4Agent) {
+		client.opts.connection.agent = ipv4Agent;
+		return "IPv4";
 	}
 
+	delete client.opts.connection.agent;
+	return "auto";
+}
+
+function killSocket() {
+	const socket = client.ws;
+
+	if (!socket) {
+		return;
+	}
+
+	client.wasCloseCalled = true;
+
 	try {
-		client.disconnect();
+		if (typeof socket.terminate === "function") {
+			socket.terminate();
+		} else if (typeof socket.close === "function") {
+			socket.close();
+		}
 	} catch (error) {
 		rememberError(error);
 	}
@@ -201,7 +223,7 @@ async function connectTwitch() {
 	const hungConnecting =
 		state === "CONNECTING" &&
 		connectingSince > 0 &&
-		Date.now() - connectingSince > 10000;
+		Date.now() - connectingSince > 12000;
 
 	if (state === "OPEN") {
 		connected = true;
@@ -217,10 +239,9 @@ async function connectTwitch() {
 	if (hungConnecting || state === "CLOSING") {
 		lastIrcError = "handshake IRC bloqué, reset du socket";
 		console.warn("[TWITCH]", lastIrcError);
-		ipv4Only = !ipv4Only;
-		applyDnsFamily();
+		useIpv4Agent = !useIpv4Agent;
 		connectingSince = 0;
-		forceCloseIrc();
+		killSocket();
 		scheduleReconnect(1500);
 		return;
 	}
@@ -228,23 +249,34 @@ async function connectTwitch() {
 	connectAttempt += 1;
 	connectingSince = Date.now();
 	applyDnsFamily();
+	const via = applyConnectionAgent();
+	console.log(`[TWITCH] Connexion IRC essai ${connectAttempt} (${via})`);
+
+	const killTimer = setTimeout(() => {
+		if (ircState() !== "OPEN") {
+			lastIrcError = `timeout handshake IRC 12s (${via})`;
+			console.warn("[TWITCH]", lastIrcError);
+			killSocket();
+		}
+	}, 12000);
+
+	if (typeof killTimer.unref === "function") {
+		killTimer.unref();
+	}
 
 	try {
-		await Promise.race([
-			client.connect(),
-			new Promise((_, reject) => {
-				setTimeout(() => reject(new Error("timeout connexion IRC 10s")), 10000);
-			})
-		]);
+		await client.connect();
+		clearTimeout(killTimer);
 	} catch (error) {
+		clearTimeout(killTimer);
 		connected = false;
 		rememberError(error);
 		console.error(
 			`[TWITCH] Échec de connexion (essai ${connectAttempt}) :`,
 			lastIrcError
 		);
-		ipv4Only = !ipv4Only;
-		forceCloseIrc();
+		useIpv4Agent = !useIpv4Agent;
+		killSocket();
 		scheduleReconnect(Math.min(20000, 2000 * connectAttempt));
 	}
 }
@@ -315,7 +347,8 @@ async function shutdownTwitch() {
 	liveWatcher.stop();
 	adsWatcher.stop();
 
-	if (ircState() === "CLOSED") {
+	if (ircState() !== "OPEN") {
+		killSocket();
 		return;
 	}
 
@@ -323,6 +356,7 @@ async function shutdownTwitch() {
 		await client.disconnect();
 		console.log("[TWITCH] Déconnexion propre effectuée");
 	} catch (error) {
+		killSocket();
 		console.error("[TWITCH] Erreur pendant la déconnexion :", getErrorText(error));
 	}
 }
