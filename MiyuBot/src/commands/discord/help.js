@@ -23,11 +23,11 @@ module.exports = {
             return message.reply(publicCommands);
         }
 
-        const adminCommands =
-            "`!config` - Configuration sécurité\n" +
+const adminCommands =
+            "`!config` - Sécurité type Wick (raid, nuke, spam)\n" +
             "`!cases` - Dossiers de modération\n" +
             "`!setupcheck` - Verification pre-production\n" +
-            "`!securitylogs` - Gestion salon logs\n" +
+            "`!securitylogs` - Logs type Dyno + alertes Wick\n" +
             "`!lockdown` / `!unlock` - Verrouillage serveur\n" +
             "`!antinuke` - Réglages anti-nuke\n" +
             "`!whitelist` - Liste blanche anti-nuke\n" +

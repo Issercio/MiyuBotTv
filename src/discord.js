@@ -3798,7 +3798,7 @@ client.on(
                 deletedMessage.guild,
                 {
                     title:
-                        "🗑️ Message Deleted",
+                        "Message Deleted",
 
                     level: "danger",
 
@@ -3906,7 +3906,7 @@ client.on(
                 updatedMessage.guild,
                 {
                     title:
-                        "✏️ Message Updated",
+                        "Message Edited",
 
                     level: "info",
 

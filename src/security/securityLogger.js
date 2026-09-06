@@ -33,14 +33,16 @@ const guildLogPipelines = new Map();
  */
 
 const COLORS = {
-    info: 0x5865F2,
-    success: 0x57F287,
-    warning: 0xFEE75C,
-    danger: 0xED4245,
-    critical: 0x992D22,
-    security: 0x9B59B6,
-    neutral: 0x95A5A6
+    info: 0x337FD5,
+    success: 0x43B581,
+    warning: 0xFAA61A,
+    danger: 0xF04747,
+    critical: 0xCC0605,
+    security: 0xE74C3C,
+    neutral: 0x99AAB5
 };
+
+const WICK_COLOR = 0xFF1A1A;
 
 
 /*
@@ -224,7 +226,7 @@ function formatUser(user) {
 
 function formatTarget(target) {
     if (!target) {
-        return "Aucune";
+        return "None";
     }
 
     if (target.id) {
@@ -232,7 +234,7 @@ function formatTarget(target) {
             target.username ||
             target.user?.username ||
             target.name ||
-            "Objet";
+            "Unknown";
 
         return `<@${target.id}> (\`${username}\`)`;
     }
@@ -242,6 +244,123 @@ function formatTarget(target) {
         target.username ||
         target.id
     );
+}
+
+
+function getEntityId(entity) {
+    if (!entity) {
+        return null;
+    }
+
+    return entity.id || entity.user?.id || null;
+}
+
+
+function getEntityAvatar(entity) {
+    if (!entity) {
+        return null;
+    }
+
+    if (typeof entity.displayAvatarURL === "function") {
+        return entity.displayAvatarURL({
+            size: 128
+        });
+    }
+
+    if (entity.user && typeof entity.user.displayAvatarURL === "function") {
+        return entity.user.displayAvatarURL({
+            size: 128
+        });
+    }
+
+    return null;
+}
+
+
+function dynoUserLine(entity) {
+    if (!entity) {
+        return "Unknown";
+    }
+
+    const id = getEntityId(entity);
+    const username =
+        entity.username ||
+        entity.user?.username ||
+        entity.globalName ||
+        entity.user?.globalName ||
+        entity.tag ||
+        "Unknown";
+
+    if (!id) {
+        return cleanValue(username);
+    }
+
+    return `${username} (${id})\n<@${id}>`;
+}
+
+
+function stripDecorations(text) {
+    return String(text || "")
+        .replace(/^[^\p{L}\p{N}]+/u, "")
+        .trim();
+}
+
+
+function dynoFieldName(name) {
+    const stripped = stripDecorations(name).toLowerCase();
+
+    if (stripped === "content" || stripped === "message") {
+        return "Message";
+    }
+
+    if (stripped === "target") {
+        return "User";
+    }
+
+    if (stripped === "moderator" || stripped === "actor") {
+        return "Moderator";
+    }
+
+    if (stripped.includes("channel")) {
+        return "Channel";
+    }
+
+    if (stripped.includes("reason")) {
+        return "Reason";
+    }
+
+    const labeled = stripDecorations(name);
+
+    return labeled || "Info";
+}
+
+
+function resolveLogStyle(options = {}) {
+    if (options.style === "wick" || options.style === "dyno") {
+        return options.style;
+    }
+
+    const title = String(options.title || "").toLowerCase();
+    const wickHints = [
+        "raid",
+        "nuke",
+        "lockdown",
+        "quarantine",
+        "antinuke",
+        "intercept",
+        "échec",
+        "echec"
+    ];
+
+    if (options.level === "critical") {
+        return "wick";
+    }
+
+    if (wickHints.some((hint) => title.includes(hint))) {
+        return "wick";
+    }
+
+    return "dyno";
 }
 
 
@@ -285,7 +404,7 @@ async function sendSecurityLog(
         }
 
         const {
-            title = "🛡️ Événement de sécurité",
+            title = "Server Log",
             description = null,
             level = "info",
             color = null,
@@ -293,121 +412,148 @@ async function sendSecurityLog(
             target = null,
             fields = [],
             footer = null,
-            timestamp = true
+            timestamp = true,
+            mention = false
         } = options;
 
-        const embed =
-            new EmbedBuilder()
-                .setColor(
-                    color !== null
-                        ? color
-                        : getColor(level)
-                )
-                .setTitle(
-                    cleanValue(
-                        title,
-                        "🛡️ Événement de sécurité"
-                    )
+        const style = resolveLogStyle(options);
+        const eventTitle = stripDecorations(title) || "Server Log";
+        const extraFields = Array.isArray(fields)
+            ? fields.filter(
+                (field) =>
+                    field &&
+                    field.name &&
+                    field.value !== undefined
+            )
+            : [];
+
+        const embed = new EmbedBuilder();
+
+        if (style === "wick") {
+            embed
+                .setColor(color !== null ? color : WICK_COLOR)
+                .setTitle("⚠  SECURITY INTERCEPT")
+                .setDescription(
+                    `**${eventTitle}**` +
+                    (description ? `\n${cleanValue(description)}` : "")
                 );
 
-        if (description) {
-            embed.setDescription(
-                cleanValue(description)
-            );
-        }
+            if (target) {
+                embed.addFields({
+                    name: "Offender",
+                    value: dynoUserLine(target),
+                    inline: true
+                });
+            }
 
-        /*
-         * ----------------------------------------------------
-         * ACTEUR
-         * ----------------------------------------------------
-         */
+            if (actor) {
+                embed.addFields({
+                    name: "Executor",
+                    value: dynoUserLine(actor),
+                    inline: true
+                });
+            }
 
-        if (actor) {
-            embed.addFields({
-                name: "👮 Moderator",
-                value: formatUser(actor),
-                inline: true
-            });
-        }
-
-        /*
-         * ----------------------------------------------------
-         * CIBLE
-         * ----------------------------------------------------
-         */
-
-        if (target) {
-            embed.addFields({
-                name: "🎯 Target",
-                value: formatTarget(target),
-                inline: true
-            });
-        }
-
-        /*
-         * ----------------------------------------------------
-         * CHAMPS SUPPLÉMENTAIRES
-         * ----------------------------------------------------
-         */
-
-        if (Array.isArray(fields)) {
-            const validFields =
-                fields
-                    .filter(
-                        (field) =>
-                            field &&
-                            field.name &&
-                            field.value !== undefined
-                    )
-                    .map(
-                        (field) => ({
-                            name: cleanValue(
-                                field.name,
-                                "Information"
-                            ),
-                            value: cleanValue(
-                                field.value
-                            ),
-                            inline:
-                                field.inline !== false
-                        })
-                    );
-
-            if (validFields.length > 0) {
+            if (extraFields.length > 0) {
                 embed.addFields(
-                    validFields.slice(0, 25)
+                    extraFields.slice(0, 20).map((field) => ({
+                        name: dynoFieldName(field.name),
+                        value: cleanValue(field.value),
+                        inline: field.inline !== false
+                    }))
                 );
             }
+
+            embed.setFooter({
+                text: footer || `MiyuBot Security • ${guild.name}`
+            });
+        } else {
+            embed.setColor(
+                color !== null
+                    ? color
+                    : getColor(level)
+            );
+
+            embed.setAuthor({
+                name: eventTitle,
+                iconURL:
+                    getEntityAvatar(target) ||
+                    getEntityAvatar(actor) ||
+                    guild.iconURL({
+                        size: 64
+                    }) ||
+                    undefined
+            });
+
+            if (description) {
+                embed.setDescription(
+                    cleanValue(description)
+                );
+            }
+
+            const thumbnail =
+                getEntityAvatar(target) ||
+                getEntityAvatar(actor);
+
+            if (thumbnail) {
+                embed.setThumbnail(thumbnail);
+            }
+
+            if (target) {
+                embed.addFields({
+                    name: "User",
+                    value: dynoUserLine(target),
+                    inline: true
+                });
+            }
+
+            if (actor) {
+                embed.addFields({
+                    name: "Moderator",
+                    value: dynoUserLine(actor),
+                    inline: true
+                });
+            }
+
+            if (extraFields.length > 0) {
+                embed.addFields(
+                    extraFields.slice(0, 22).map((field) => ({
+                        name: dynoFieldName(field.name),
+                        value: cleanValue(field.value),
+                        inline: field.inline !== false
+                    }))
+                );
+            }
+
+            const footerId =
+                getEntityId(target) ||
+                getEntityId(actor) ||
+                guild.id;
+
+            embed.setFooter({
+                text: footer || `ID: ${footerId}`
+            });
         }
-
-        /*
-         * ----------------------------------------------------
-         * FOOTER
-         * ----------------------------------------------------
-         */
-
-        embed.setFooter({
-            text:
-                footer ||
-                `MiyuBot Logs • ${guild.name}`
-        });
-
-        /*
-         * ----------------------------------------------------
-         * DATE
-         * ----------------------------------------------------
-         */
 
         if (timestamp) {
             embed.setTimestamp();
         }
 
+        const payload = {
+            embeds: [embed]
+        };
+
+        if (mention && style === "wick") {
+            payload.content = "@here";
+            payload.allowedMentions = {
+                parse: ["here"]
+            };
+        }
+
         await enqueueGuildLog(
             guild.id,
             async () => {
-                await channel.send({
-                    embeds: [embed]
-                });
+                await channel.send(payload);
             }
         );
 
@@ -445,55 +591,55 @@ async function logMemberEvent(
     const types = {
         join: {
             title: member?.user?.bot
-                ? "🤖 Bot Joined"
-                : "📥 Member Joined",
+                ? "Bot Joined"
+                : "Member Joined",
             level: member?.user?.bot
                 ? "warning"
                 : "success"
         },
 
         leave: {
-            title: "🚪 Member Left",
+            title: "Member Left",
             level: "info"
         },
 
         kick: {
-            title: "👢 Member Kicked",
+            title: "Member Kicked",
             level: "danger"
         },
 
         ban: {
-            title: "🔨 Member Banned",
+            title: "Member Banned",
             level: "danger"
         },
 
         unban: {
-            title: "🔓 Member Unbanned",
+            title: "Member Unbanned",
             level: "warning"
         },
 
         timeout: {
-            title: "⏱️ Member Timed Out",
+            title: "Member Timed Out",
             level: "warning"
         },
 
         timeout_remove: {
-            title: "⏱️ Timeout Removed",
+            title: "Timeout Removed",
             level: "success"
         },
 
         nickname: {
-            title: "📝 Member Nickname Updated",
+            title: "Nickname Updated",
             level: "info"
         },
 
         role_add: {
-            title: "🏷️ Role Added",
+            title: "Role Added",
             level: "info"
         },
 
         role_remove: {
-            title: "🏷️ Role Removed",
+            title: "Role Removed",
             level: "warning"
         }
     };
@@ -536,17 +682,17 @@ async function logChannelEvent(
 ) {
     const types = {
         create: {
-            title: "📁 Channel Created",
+            title: "Channel Created",
             level: "info"
         },
 
         delete: {
-            title: "🗑️ Channel Deleted",
+            title: "Channel Deleted",
             level: "danger"
         },
 
         update: {
-            title: "📝 Channel Updated",
+            title: "Channel Updated",
             level: "warning"
         }
     };
@@ -569,7 +715,7 @@ async function logChannelEvent(
                 config.level,
             fields: [
                 {
-                    name: "📁 Channel",
+                    name: "Channel",
                     value:
                         channel?.id
                             ? `<#${channel.id}>`
@@ -599,27 +745,27 @@ async function logRoleEvent(
 ) {
     const types = {
         create: {
-            title: "🎭 Role Created",
+            title: "Role Created",
             level: "info"
         },
 
         delete: {
-            title: "🗑️ Role Deleted",
+            title: "Role Deleted",
             level: "danger"
         },
 
         update: {
-            title: "🎭 Role Updated",
+            title: "Role Updated",
             level: "warning"
         },
 
         add: {
-            title: "🏷️ Role Assigned",
+            title: "Role Assigned",
             level: "info"
         },
 
         remove: {
-            title: "🏷️ Role Removed",
+            title: "Role Removed",
             level: "warning"
         }
     };
@@ -642,7 +788,7 @@ async function logRoleEvent(
                 config.level,
             fields: [
                 {
-                    name: "🎭 Role",
+                    name: "Role",
                     value:
                         role?.id
                             ? `<@&${role.id}>`
@@ -674,10 +820,12 @@ async function logRaid(
             ...options,
             title:
                 options.title ||
-                "🚨 Raid Detected",
+                "Mass Join / Raid",
             level:
                 options.level ||
-                "critical"
+                "critical",
+            style: "wick",
+            mention: options.mention !== false
         }
     );
 }
@@ -702,8 +850,8 @@ async function logLockdown(
                 options.title ||
                 (
                     activated
-                        ? "🔒 Lockdown Enabled"
-                        : "🔓 Lockdown Disabled"
+                        ? "Server Lockdown Enabled"
+                        : "Server Lockdown Disabled"
                 ),
             level:
                 options.level ||
@@ -711,7 +859,8 @@ async function logLockdown(
                     activated
                         ? "critical"
                         : "success"
-                )
+                ),
+            style: "wick"
         }
     );
 }

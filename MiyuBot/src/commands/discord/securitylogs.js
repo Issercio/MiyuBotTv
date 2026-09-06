@@ -10,6 +10,10 @@ const {
     databaseReady
 } = require("../../database/database");
 
+const {
+    sendSecurityLog
+} = require("../../security/securityLogger");
+
 module.exports = {
     name: "securitylogs",
 
@@ -43,9 +47,11 @@ module.exports = {
             const embed =
                 new EmbedBuilder()
                     .setColor(0x5865F2)
-                    .setTitle("🔐 Security Logs")
+                    .setTitle("Action Log")
                     .setDescription(
-                        "Gestion du salon centralisé des logs de sécurité de MiyuBot."
+                        "Salon de logs MiyuBot.\n" +
+                        "Style **Dyno** pour les actions (messages, membres, salons).\n" +
+                        "Style **Wick** pour la sécurité (raid, anti-nuke, lockdown)."
                     )
                     .addFields(
                         {
@@ -370,51 +376,59 @@ module.exports = {
                 );
             }
 
-            const embed =
-                new EmbedBuilder()
-                    .setColor(0x00AEFF)
-                    .setTitle(
-                        "🧪 TEST DES SECURITY LOGS"
-                    )
-                    .setDescription(
-                        "MiyuBot vient d'effectuer un test du système centralisé de logs."
-                    )
-                    .addFields(
-                        {
-                            name: "👮 Test effectué par",
-                            value:
-                                `${message.member}\n\`${message.author.username}\``,
-                            inline: true
-                        },
-                        {
-                            name: "🆔 Utilisateur",
-                            value:
-                                `\`${message.author.id}\``,
-                            inline: true
-                        },
-                        {
-                            name: "📁 Salon",
-                            value:
-                                `${channel}`,
-                            inline: true
-                        },
-                        {
-                            name: "✅ Résultat",
-                            value:
-                                "Le système de logs fonctionne correctement.",
-                            inline: false
-                        }
-                    )
-                    .setFooter({
-                        text:
-                            "MiyuBot • Security Test"
-                    })
-                    .setTimestamp();
-
             try {
-                await channel.send({
-                    embeds: [embed]
-                });
+                await sendSecurityLog(
+                    message.guild,
+                    {
+                        title: "Message Deleted",
+                        style: "dyno",
+                        level: "danger",
+                        actor: message.author,
+                        target: message.author,
+                        fields: [
+                            {
+                                name: "Channel",
+                                value: `${channel}`,
+                                inline: true
+                            },
+                            {
+                                name: "Message",
+                                value: "This is a Dyno-style action log test.",
+                                inline: false
+                            }
+                        ]
+                    }
+                );
+
+                await sendSecurityLog(
+                    message.guild,
+                    {
+                        title: "Anti-Nuke Threshold Reached",
+                        style: "wick",
+                        level: "critical",
+                        actor: message.author,
+                        target: message.author,
+                        description:
+                            "Sample Wick-style intercept. No punishment was applied.",
+                        fields: [
+                            {
+                                name: "Action",
+                                value: "channel_delete `1/3`",
+                                inline: true
+                            },
+                            {
+                                name: "Punishment",
+                                value: "none (test)",
+                                inline: true
+                            },
+                            {
+                                name: "Whitelisted",
+                                value: "No",
+                                inline: true
+                            }
+                        ]
+                    }
+                );
             } catch (error) {
                 console.error(
                     "❌ Erreur test Security Logs :",
