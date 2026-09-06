@@ -1,4 +1,9 @@
+const dns = require("dns");
 const tmi = require("tmi.js");
+
+if (typeof dns.setDefaultResultOrder === "function") {
+	dns.setDefaultResultOrder("ipv4first");
+}
 
 const { loadTwitchConfig, missingRequired } = require("./twitch/config");
 const { createHelix } = require("./twitch/helix");
@@ -17,6 +22,7 @@ if (!config.enabled) {
 		enabled: false,
 		client: null,
 		isConnected: () => false,
+		ircState: () => "CLOSED",
 		isLive: () => false,
 		setDiscordClient: () => {},
 		shutdownTwitch: async () => {}
@@ -37,6 +43,7 @@ if (missing.length > 0) {
 		enabled: false,
 		client: null,
 		isConnected: () => false,
+		ircState: () => "CLOSED",
 		isLive: () => false,
 		setDiscordClient: () => {},
 		shutdownTwitch: async () => {}
@@ -55,6 +62,8 @@ const client = new tmi.Client({
 	},
 	channels: [config.channel],
 	connection: {
+		server: "irc-ws.chat.twitch.tv",
+		port: 443,
 		reconnect: true,
 		secure: true,
 		timeout: 20000,
@@ -76,6 +85,9 @@ const commands = createCommandRouter({
 });
 
 let connected = false;
+let shuttingDown = false;
+let connectAttempt = 0;
+let reconnectTimer = null;
 
 let discordClientRef = null;
 
@@ -113,8 +125,63 @@ function getErrorText(error) {
 	return error.message || JSON.stringify(error);
 }
 
+function ircState() {
+	if (typeof client.readyState === "function") {
+		return client.readyState();
+	}
+
+	return connected ? "OPEN" : "CLOSED";
+}
+
+function scheduleReconnect(delayMs) {
+	if (shuttingDown || reconnectTimer) {
+		return;
+	}
+
+	reconnectTimer = setTimeout(() => {
+		reconnectTimer = null;
+		connectTwitch();
+	}, delayMs);
+
+	if (typeof reconnectTimer.unref === "function") {
+		reconnectTimer.unref();
+	}
+}
+
+async function connectTwitch() {
+	if (shuttingDown) {
+		return;
+	}
+
+	const state = ircState();
+
+	if (state === "OPEN") {
+		connected = true;
+		return;
+	}
+
+	if (state === "CONNECTING") {
+		scheduleReconnect(5000);
+		return;
+	}
+
+	connectAttempt += 1;
+
+	try {
+		await client.connect();
+	} catch (error) {
+		connected = false;
+		console.error(
+			`[TWITCH] Échec de connexion (essai ${connectAttempt}) :`,
+			getErrorText(error)
+		);
+		scheduleReconnect(Math.min(30000, 2000 * connectAttempt));
+	}
+}
+
 client.on("connected", (address, port) => {
 	connected = true;
+	connectAttempt = 0;
 	console.log(
 		`[TWITCH] Connecté ${address}:${port} — #${config.channel}`
 	);
@@ -125,10 +192,20 @@ client.on("connected", (address, port) => {
 client.on("disconnected", (reason) => {
 	connected = false;
 	console.warn(`[TWITCH] Déconnecté : ${reason}`);
+
+	if (!shuttingDown) {
+		scheduleReconnect(3000);
+	}
 });
 
 client.on("reconnect", () => {
 	console.log("[TWITCH] Reconnexion IRC...");
+});
+
+client.on("join", (channel, username, self) => {
+	if (self) {
+		console.log(`[TWITCH] JOIN ${channel} en tant que ${username}`);
+	}
 });
 
 client.on("notice", (channel, msgid, message) => {
@@ -153,15 +230,20 @@ client.on("message", async (channel, tags, message, self) => {
 	}
 });
 
-client.connect().catch((error) => {
-	console.error("[TWITCH] Échec de connexion :", getErrorText(error));
-});
+connectTwitch();
 
 async function shutdownTwitch() {
+	shuttingDown = true;
+
+	if (reconnectTimer) {
+		clearTimeout(reconnectTimer);
+		reconnectTimer = null;
+	}
+
 	liveWatcher.stop();
 	adsWatcher.stop();
 
-	if (!connected) {
+	if (ircState() === "CLOSED") {
 		return;
 	}
 
@@ -176,7 +258,8 @@ async function shutdownTwitch() {
 module.exports = {
 	enabled: true,
 	client,
-	isConnected: () => connected,
+	isConnected: () => ircState() === "OPEN",
+	ircState,
 	isLive: () => liveWatcher.isLive(),
 	setDiscordClient,
 	shutdownTwitch

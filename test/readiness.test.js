@@ -99,9 +99,14 @@ describe("batterie Twitch", () => {
     test("copie Fly Twitch alignée", () => {
         const nestedAds = read("MiyuBot/src/twitch/adsWatcher.js");
         const nestedCmd = read("MiyuBot/src/twitch/commands.js");
+        const nestedTwitch = read("MiyuBot/src/twitch.js");
         assert.match(nestedAds, /pub automatique va se lancer/);
         assert.match(nestedCmd, /sentiers lumineux/);
         assert.match(nestedCmd, /discord\.com\/invite/);
         assert.match(read("MiyuBot/src/twitch/chatQueue.js"), /chat say timeout/);
+        assert.match(nestedTwitch, /ipv4first/);
+        assert.match(nestedTwitch, /connectTwitch/);
+        assert.match(read("src/twitch.js"), /ipv4first/);
+        assert.match(read("src/index.js"), /ipv4first/);
     });
 });

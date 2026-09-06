@@ -16,7 +16,8 @@ COPY . .
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
+ENV NODE_OPTIONS=--dns-result-order=ipv4first
 
 EXPOSE 3000
 
-CMD ["node", "src/index.js"]
+CMD ["node", "--dns-result-order=ipv4first", "src/index.js"]

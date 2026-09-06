@@ -1,7 +1,13 @@
+const dns = require("dns");
+
+if (typeof dns.setDefaultResultOrder === "function") {
+	dns.setDefaultResultOrder("ipv4first");
+}
+
 console.log("🚀 Démarrage de MiyuBot...");
 
 require("dotenv").config({
-	override: true
+	override: process.env.NODE_ENV !== "production"
 });
 
 const {
@@ -44,6 +50,9 @@ setHealthStatusProvider(() => ({
 		typeof twitchRuntime.isConnected === "function" &&
 		twitchRuntime.isConnected()
 	),
+	twitch_irc: twitchRuntime && typeof twitchRuntime.ircState === "function"
+		? twitchRuntime.ircState()
+		: "CLOSED",
 	twitch_live: Boolean(
 		twitchRuntime &&
 		typeof twitchRuntime.isLive === "function" &&

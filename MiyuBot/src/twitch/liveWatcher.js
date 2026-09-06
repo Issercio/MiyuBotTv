@@ -91,6 +91,10 @@ function createLiveWatcher({
 			return;
 		}
 
+		if (timer) {
+			return;
+		}
+
 		tick();
 		timer = setInterval(tick, config.livePollMs);
 

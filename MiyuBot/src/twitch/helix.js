@@ -43,6 +43,10 @@ function requestJson({
 			}
 		);
 
+		request.setTimeout(8000, () => {
+			request.destroy(new Error("Helix timeout"));
+		});
+
 		request.on("error", reject);
 
 		if (body) {

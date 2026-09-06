@@ -122,6 +122,10 @@ function createAdsWatcher({
 			return;
 		}
 
+		if (timer) {
+			return;
+		}
+
 		tick();
 		timer = setInterval(tick, config.adsPollMs);
 
