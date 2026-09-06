@@ -136,6 +136,8 @@ Automod (viewers) : spam, répétitions, caps, liens (clips/YouTube autorisés).
 
 Annonce live Discord : `TWITCH_DISCORD_LIVE_CHANNEL_ID` + Helix.
 
+Alerte pubs auto (30s avant) : secret Fly `TWITCH_ADS_TOKEN` = token **du streamer** avec le scope `channel:read:ads`. En live, MiyuBot envoie : `Votre attention : dans 30s une pub automatique va se lancer. Merci pour votre soutien !`
+
 ## Sécurité
 
 - Ne commit jamais `.env`.

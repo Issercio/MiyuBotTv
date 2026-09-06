@@ -6,6 +6,7 @@ const { createChatQueue } = require("./twitch/chatQueue");
 const { createAutomod } = require("./twitch/automod");
 const { createCommandRouter } = require("./twitch/commands");
 const { createLiveWatcher } = require("./twitch/liveWatcher");
+const { createAdsWatcher } = require("./twitch/adsWatcher");
 
 const config = loadTwitchConfig();
 
@@ -93,6 +94,13 @@ const liveWatcher = createLiveWatcher({
 	getDiscordClient
 });
 
+const adsWatcher = createAdsWatcher({
+	config,
+	helix,
+	queue,
+	isLive: () => liveWatcher.isLive()
+});
+
 function getErrorText(error) {
 	if (!error) {
 		return "erreur inconnue";
@@ -111,6 +119,7 @@ client.on("connected", (address, port) => {
 		`[TWITCH] Connecté ${address}:${port} — #${config.channel}`
 	);
 	liveWatcher.start();
+	adsWatcher.start();
 });
 
 client.on("disconnected", (reason) => {
@@ -157,6 +166,7 @@ client.connect().catch((error) => {
 
 async function shutdownTwitch() {
 	liveWatcher.stop();
+	adsWatcher.stop();
 
 	if (!connected) {
 		return;

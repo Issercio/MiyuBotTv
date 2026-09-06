@@ -93,8 +93,8 @@ function createHelix(config) {
 		return appToken;
 	}
 
-	async function helixGet(path) {
-		const token = await getAppToken();
+	async function helixGet(path, { userToken = "" } = {}) {
+		const token = userToken || await getAppToken();
 
 		if (!token) {
 			return null;
@@ -111,6 +111,24 @@ function createHelix(config) {
 		});
 
 		if (result.status !== 200) {
+			return {
+				ok: false,
+				status: result.status,
+				json: result.json
+			};
+		}
+
+		return {
+			ok: true,
+			status: result.status,
+			json: result.json
+		};
+	}
+
+	async function helixData(path, options) {
+		const result = await helixGet(path, options);
+
+		if (!result || !result.ok) {
 			return null;
 		}
 
@@ -118,7 +136,7 @@ function createHelix(config) {
 	}
 
 	async function getUser(login) {
-		const data = await helixGet(
+		const data = await helixData(
 			`/helix/users?login=${encodeURIComponent(String(login).toLowerCase())}`
 		);
 
@@ -126,7 +144,7 @@ function createHelix(config) {
 	}
 
 	async function getStream(login) {
-		const data = await helixGet(
+		const data = await helixData(
 			`/helix/streams?user_login=${encodeURIComponent(String(login).toLowerCase())}`
 		);
 
@@ -138,7 +156,7 @@ function createHelix(config) {
 			return null;
 		}
 
-		const data = await helixGet(
+		const data = await helixData(
 			`/helix/channels?broadcaster_id=${encodeURIComponent(broadcasterId)}`
 		);
 
@@ -150,11 +168,53 @@ function createHelix(config) {
 			return null;
 		}
 
-		const data = await helixGet(
+		const data = await helixData(
 			`/helix/games?id=${encodeURIComponent(gameId)}`
 		);
 
 		return data && Array.isArray(data.data) ? data.data[0] || null : null;
+	}
+
+	function adsUserToken() {
+		if (config.adsToken) {
+			return config.adsToken;
+		}
+
+		if (
+			String(config.username || "").toLowerCase() ===
+			String(config.channel || "").toLowerCase()
+		) {
+			return String(config.oauthToken || "").replace(/^oauth:/i, "");
+		}
+
+		return "";
+	}
+
+	async function getAdSchedule(broadcasterId) {
+		if (!broadcasterId) {
+			return null;
+		}
+
+		const userToken = adsUserToken();
+		const result = await helixGet(
+			`/helix/channels/ads?broadcaster_id=${encodeURIComponent(broadcasterId)}`,
+			userToken ? { userToken } : {}
+		);
+
+		if (!result || !result.ok) {
+			return {
+				ok: false,
+				status: result?.status || 0
+			};
+		}
+
+		return {
+			ok: true,
+			schedule:
+				result.json && Array.isArray(result.json.data)
+					? result.json.data[0] || null
+					: null
+		};
 	}
 
 	function formatUptime(startedAt) {
@@ -181,6 +241,7 @@ function createHelix(config) {
 		getStream,
 		getChannel,
 		getGame,
+		getAdSchedule,
 		formatUptime
 	};
 }
