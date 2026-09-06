@@ -82,7 +82,7 @@ describe("batterie Twitch", () => {
     test("textes Kitsunara so et discord", () => {
         assert.match(commands, /sentiers lumineux/);
         assert.match(commands, /sanctuaire de Kitsunara/);
-        assert.match(commands, /socials-links\.fr/);
+        assert.match(commands, /sociallinks\.edgeone\.dev/);
     });
 
     test("alerte pubs auto 30s", () => {
