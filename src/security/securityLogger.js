@@ -420,10 +420,27 @@ async function sendSecurityLog(
         const eventTitle = stripDecorations(title) || "Server Log";
         const extraFields = Array.isArray(fields)
             ? fields.filter(
-                (field) =>
-                    field &&
-                    field.name &&
-                    field.value !== undefined
+                (field) => {
+                    if (!field || !field.name) {
+                        return false;
+                    }
+
+                    if (
+                        field.value === undefined ||
+                        field.value === null
+                    ) {
+                        return false;
+                    }
+
+                    const text = String(field.value).trim();
+
+                    return (
+                        text.length > 0 &&
+                        text.toLowerCase() !== "aucun" &&
+                        text.toLowerCase() !== "aucune" &&
+                        text.toLowerCase() !== "inconnu"
+                    );
+                }
             )
             : [];
 

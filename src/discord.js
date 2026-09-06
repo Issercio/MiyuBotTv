@@ -5078,49 +5078,58 @@ client.on(
                 return;
             }
 
-            const oldChannelValue =
-                oldState.channelId
-                    ? `<#${oldState.channelId}>`
-                    : null;
+            const voiceLabel = (state) => {
+                if (!state?.channelId) {
+                    return null;
+                }
 
-            const newChannelValue =
-                newState.channelId
-                    ? `<#${newState.channelId}>`
-                    : null;
+                const channel =
+                    state.channel ||
+                    state.guild?.channels.cache.get(state.channelId);
+
+                const name = channel?.name || state.channelId;
+
+                return `<#${state.channelId}> (\`${name}\`)`;
+            };
+
+            const fromChannel = voiceLabel(oldState);
+            const toChannel = voiceLabel(newState);
 
             let title = "Vocal";
             let description = null;
             const fields = [];
 
             if (!oldState.channelId && newState.channelId) {
-                title = "Vocal rejoint";
-                description = `${member} a rejoint ${newChannelValue}.`;
+                title = "Vocal — join";
+                description =
+                    `${member} a rejoint ${toChannel}.`;
                 fields.push({
-                    name: "Salon",
-                    value: newChannelValue,
-                    inline: true
+                    name: "Salon rejoint",
+                    value: toChannel,
+                    inline: false
                 });
             } else if (oldState.channelId && !newState.channelId) {
-                title = "Vocal quitté";
-                description = `${member} a quitté ${oldChannelValue}.`;
+                title = "Vocal — leave";
+                description =
+                    `${member} a quitté ${fromChannel}.`;
                 fields.push({
-                    name: "Salon",
-                    value: oldChannelValue,
-                    inline: true
+                    name: "Salon quitté",
+                    value: fromChannel,
+                    inline: false
                 });
             } else {
-                title = "Vocal déplacé";
+                title = "Vocal — move";
                 description =
-                    `${member} est passé de ${oldChannelValue} à ${newChannelValue}.`;
+                    `${member} a été déplacé de ${fromChannel} vers ${toChannel}.`;
                 fields.push(
                     {
-                        name: "De",
-                        value: oldChannelValue,
+                        name: "Salon de départ",
+                        value: fromChannel,
                         inline: true
                     },
                     {
-                        name: "Vers",
-                        value: newChannelValue,
+                        name: "Salon d'arrivée",
+                        value: toChannel,
                         inline: true
                     }
                 );
