@@ -156,10 +156,15 @@ function createCommandRouter({
 		}
 
 		if (commandName === "discord") {
-			await reply(
+			const invite =
+				config.discordInvite ||
+				"https://discord.gg/7KyxTPEwXv";
+
+			await queue.say(
 				channel,
-				tags,
-				config.discordInvite || "Invite Discord non configurée."
+				"Rejoins le sanctuaire de Kitsunara sur Discord ! " +
+				"Papotages, créations, chill et bonne humeur t’attendent " +
+				`sous les cerisiers 🌸🎐 → ${invite}`
 			);
 			return;
 		}
@@ -211,22 +216,29 @@ function createCommandRouter({
 				return;
 			}
 
-			let extra = "";
+			const url = `https://twitch.tv/${target}`;
+			let displayName = target;
+			let gameName = "un jeu inconnu";
 
 			if (helix.available) {
 				const user = await helix.getUser(target);
-				const stream = await helix.getStream(target);
 
-				if (stream) {
-					extra = ` En live sur ${stream.game_name || "Twitch"} : ${stream.title}`;
-				} else if (user) {
-					extra = ` Anciennement vu sur Twitch.`;
+				if (user) {
+					displayName = user.display_name || target;
+					const stream = await helix.getStream(target);
+					const channelInfo = await helix.getChannel(user.id);
+					gameName =
+						stream?.game_name ||
+						channelInfo?.game_name ||
+						gameName;
 				}
 			}
 
 			await queue.say(
 				channel,
-				`Allez check ${target} -> https://twitch.tv/${target}${extra}`
+				`Traversez les sentiers lumineux de ${url} ` +
+				`pour découvrir ${displayName} ` +
+				`qui a joué pour la dernière fois à ${gameName} !`
 			);
 			return;
 		}

@@ -133,6 +133,18 @@ function createHelix(config) {
 		return data && Array.isArray(data.data) ? data.data[0] || null : null;
 	}
 
+	async function getChannel(broadcasterId) {
+		if (!broadcasterId) {
+			return null;
+		}
+
+		const data = await helixGet(
+			`/helix/channels?broadcaster_id=${encodeURIComponent(broadcasterId)}`
+		);
+
+		return data && Array.isArray(data.data) ? data.data[0] || null : null;
+	}
+
 	async function getGame(gameId) {
 		if (!gameId) {
 			return null;
@@ -167,6 +179,7 @@ function createHelix(config) {
 		available: Boolean(config.clientId && config.clientSecret),
 		getUser,
 		getStream,
+		getChannel,
 		getGame,
 		formatUptime
 	};
