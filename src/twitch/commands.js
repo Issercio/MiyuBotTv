@@ -5,6 +5,8 @@ const {
 	claimCommand
 } = require("../database/database");
 
+const os = require("os");
+
 const { isPrivileged } = require("./automod");
 
 const BUILTIN_NAMES = new Set([
@@ -105,7 +107,15 @@ function createCommandRouter({
 		const privileged = isPrivileged(tags, config.channel);
 
 		if (commandName === "ping") {
-			await reply(channel, tags, "Pong. MiyuBot Twitch est en ligne.");
+			const instance = process.env.FLY_MACHINE_ID
+				? `fly/${process.env.FLY_REGION || "?"}/${String(process.env.FLY_MACHINE_ID).slice(0, 8)}`
+				: `local/${os.hostname()}`;
+
+			await reply(
+				channel,
+				tags,
+				`Pong. MiyuBot Twitch est en ligne. [${instance}]`
+			);
 			return;
 		}
 
