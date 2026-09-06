@@ -104,8 +104,9 @@ describe("batterie Twitch", () => {
         assert.match(nestedCmd, /sentiers lumineux/);
         assert.match(nestedCmd, /discord\.com\/invite/);
         assert.match(read("MiyuBot/src/twitch/chatQueue.js"), /chat say timeout/);
-        assert.match(nestedTwitch, /timeout connexion IRC/);
-        assert.match(read("src/twitch.js"), /timeout connexion IRC/);
+        assert.match(nestedTwitch, /family: 4/);
+        assert.match(nestedTwitch, /Cannot disconnect/);
+        assert.match(read("src/twitch.js"), /family: 4/);
         assert.match(read("src/index.js"), /twitch_last_error/);
     });
 });
