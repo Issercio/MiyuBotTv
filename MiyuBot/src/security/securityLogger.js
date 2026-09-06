@@ -4,6 +4,7 @@ const {
 
 const {
     get,
+    run,
     databaseReady
 } = require("../database/database");
 
@@ -51,6 +52,38 @@ const WICK_COLOR = 0xFF1A1A;
  * ============================================================
  */
 
+function isMiyuLogChannel(channel) {
+    if (!channel || !channel.isTextBased()) {
+        return false;
+    }
+
+    return /miyubot[-_]?logs/i.test(String(channel.name || ""));
+}
+
+function findMiyuLogChannel(guild) {
+    return guild.channels.cache.find(isMiyuLogChannel) || null;
+}
+
+async function persistLogChannel(guildId, channelId) {
+    const now = Date.now();
+
+    await run(
+        `
+        INSERT INTO guild_settings (
+            guild_id,
+            security_log_channel_id,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(guild_id) DO UPDATE SET
+            security_log_channel_id = excluded.security_log_channel_id,
+            updated_at = excluded.updated_at
+        `,
+        [guildId, channelId, now, now]
+    );
+}
+
 async function getSecurityLogChannel(guild) {
     if (!guild) {
         return null;
@@ -85,46 +118,37 @@ async function getSecurityLogChannel(guild) {
             [guild.id]
         );
 
-        if (!settings) {
-            return null;
-        }
+        let channel = null;
+        const channelId = settings?.security_log_channel_id || null;
 
-        const channelId =
-            settings.security_log_channel_id;
+        if (channelId) {
+            channel = guild.channels.cache.get(channelId) || null;
 
-        if (!channelId) {
-            return null;
-        }
-
-        let channel =
-            guild.channels.cache.get(channelId);
-
-        if (!channel) {
-            try {
-                channel =
-                    await guild.channels.fetch(channelId);
-            } catch (error) {
-                console.error(
-                    "⚠️ Impossible de récupérer le salon de logs :",
-                    error
-                );
-
-                return null;
+            if (!channel) {
+                try {
+                    channel = await guild.channels.fetch(channelId);
+                } catch (_error) {
+                    channel = null;
+                }
             }
         }
 
-        if (!channel) {
+        if (!channel || !channel.isTextBased()) {
+            channel = findMiyuLogChannel(guild);
+        }
+
+        if (!channel || !channel.isTextBased()) {
             return null;
         }
 
-        if (!channel.isTextBased()) {
-            return null;
+        if (channel.id !== channelId) {
+            await persistLogChannel(guild.id, channel.id);
         }
 
         securityLogChannelCache.set(
             guild.id,
             {
-                channelId,
+                channelId: channel.id,
                 cachedAt: Date.now()
             }
         );

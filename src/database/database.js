@@ -1,10 +1,23 @@
 const sqlite3 = require("sqlite3").verbose();
+const fs = require("fs");
 const path = require("path");
 
-const dbPath = path.join(
-    __dirname,
-    "miyubot.db"
-);
+function resolveDatabasePath() {
+    if (process.env.DATABASE_PATH) {
+        return process.env.DATABASE_PATH;
+    }
+
+    if (
+        fs.existsSync("/data") &&
+        fs.statSync("/data").isDirectory()
+    ) {
+        return path.join("/data", "miyubot.db");
+    }
+
+    return path.join(__dirname, "miyubot.db");
+}
+
+const dbPath = resolveDatabasePath();
 
 const db = new sqlite3.Database(
     dbPath,

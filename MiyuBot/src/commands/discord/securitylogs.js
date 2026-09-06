@@ -193,6 +193,34 @@ module.exports = {
                 }
             }
 
+            const namedLogChannel =
+                message.guild.channels.cache.find((channel) =>
+                    channel.isTextBased() &&
+                    /miyubot[-_]?logs/i.test(String(channel.name || ""))
+                );
+
+            if (namedLogChannel) {
+                await run(
+                    `
+                    UPDATE guild_settings
+                    SET security_log_channel_id = ?,
+                        updated_at = ?
+                    WHERE guild_id = ?
+                    `,
+                    [
+                        namedLogChannel.id,
+                        Date.now(),
+                        message.guild.id
+                    ]
+                );
+
+                await applyStarterPreset(message.guild.id);
+
+                return message.reply(
+                    `${namedLogChannel} existait déjà : il est de nouveau lié aux logs.`
+                );
+            }
+
             const channelName =
                 "🔐・miyubot-logs";
 
