@@ -27,11 +27,11 @@ function loadTwitchConfig() {
 	const enabled = envFlag("TWITCH_ENABLED", false);
 
 	const username = envText("TWITCH_USERNAME");
-	const oauthRaw = envText("TWITCH_OAUTH_TOKEN");
+	const oauthRaw = envText("TWITCH_OAUTH_TOKEN").replace(/^["']+|["']+$/g, "");
 	const channel = envText("TWITCH_CHANNEL").replace(/^#/, "").toLowerCase();
 
 	const oauthToken = oauthRaw
-		? (oauthRaw.startsWith("oauth:") ? oauthRaw : `oauth:${oauthRaw}`)
+		? (oauthRaw.toLowerCase().startsWith("oauth:") ? oauthRaw : `oauth:${oauthRaw}`)
 		: "";
 
 	return {
@@ -46,7 +46,6 @@ function loadTwitchConfig() {
 		discordInvite: envText("TWITCH_DISCORD_INVITE"),
 		twitter: envText("TWITCH_TWITTER"),
 		youtube: envText("TWITCH_YOUTUBE"),
-		tiktok: envText("TWITCH_TIKTOK"),
 		socialsUrl: envText(
 			"TWITCH_SOCIALS_URL",
 			"https://sociallinks.edgeone.dev"

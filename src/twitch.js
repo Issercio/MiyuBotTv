@@ -23,6 +23,7 @@ if (!config.enabled) {
 		client: null,
 		isConnected: () => false,
 		ircState: () => "CLOSED",
+		lastError: () => "",
 		isLive: () => false,
 		setDiscordClient: () => {},
 		shutdownTwitch: async () => {}
@@ -44,6 +45,7 @@ if (missing.length > 0) {
 		client: null,
 		isConnected: () => false,
 		ircState: () => "CLOSED",
+		lastError: () => "",
 		isLive: () => false,
 		setDiscordClient: () => {},
 		shutdownTwitch: async () => {}
@@ -52,24 +54,39 @@ if (missing.length > 0) {
 	return;
 }
 
+let connected = false;
+let shuttingDown = false;
+let connectAttempt = 0;
+let reconnectTimer = null;
+let connectingSince = 0;
+let lastIrcError = "";
+let ipv4Only = true;
+
 const client = new tmi.Client({
 	options: {
 		debug: false
 	},
+	logger: {
+		info: () => {},
+		warn: (message) => {
+			console.warn("[TWITCH]", message);
+		},
+		error: (message) => {
+			lastIrcError = String(message || "erreur irc").slice(0, 180);
+			console.error("[TWITCH]", lastIrcError);
+		}
+	},
 	identity: {
-		username: config.username,
+		username: String(config.username || "").toLowerCase(),
 		password: config.oauthToken
 	},
 	channels: [config.channel],
 	connection: {
 		server: "irc-ws.chat.twitch.tv",
 		port: 443,
-		reconnect: true,
+		reconnect: false,
 		secure: true,
-		timeout: 20000,
-		reconnectInterval: 2000,
-		maxReconnectInterval: 30000,
-		maxReconnectAttempts: Infinity
+		timeout: 10000
 	}
 });
 
@@ -83,11 +100,6 @@ const commands = createCommandRouter({
 	helix,
 	automod
 });
-
-let connected = false;
-let shuttingDown = false;
-let connectAttempt = 0;
-let reconnectTimer = null;
 
 let discordClientRef = null;
 
@@ -133,6 +145,38 @@ function ircState() {
 	return connected ? "OPEN" : "CLOSED";
 }
 
+function rememberError(error) {
+	lastIrcError = getErrorText(error).slice(0, 180);
+}
+
+function applyDnsFamily() {
+	if (typeof dns.setDefaultResultOrder !== "function") {
+		return;
+	}
+
+	dns.setDefaultResultOrder(ipv4Only ? "ipv4first" : "verbatim");
+}
+
+function forceCloseIrc() {
+	try {
+		const socket = client.ws;
+
+		if (socket && typeof socket.terminate === "function") {
+			socket.terminate();
+		} else if (socket && typeof socket.close === "function") {
+			socket.close();
+		}
+	} catch (error) {
+		rememberError(error);
+	}
+
+	try {
+		client.disconnect();
+	} catch (error) {
+		rememberError(error);
+	}
+}
+
 function scheduleReconnect(delayMs) {
 	if (shuttingDown || reconnectTimer) {
 		return;
@@ -154,34 +198,62 @@ async function connectTwitch() {
 	}
 
 	const state = ircState();
+	const hungConnecting =
+		state === "CONNECTING" &&
+		connectingSince > 0 &&
+		Date.now() - connectingSince > 10000;
 
 	if (state === "OPEN") {
 		connected = true;
+		connectingSince = 0;
 		return;
 	}
 
-	if (state === "CONNECTING") {
-		scheduleReconnect(5000);
+	if (state === "CONNECTING" && !hungConnecting) {
+		scheduleReconnect(2000);
+		return;
+	}
+
+	if (hungConnecting || state === "CLOSING") {
+		lastIrcError = "handshake IRC bloqué, reset du socket";
+		console.warn("[TWITCH]", lastIrcError);
+		ipv4Only = !ipv4Only;
+		applyDnsFamily();
+		connectingSince = 0;
+		forceCloseIrc();
+		scheduleReconnect(1500);
 		return;
 	}
 
 	connectAttempt += 1;
+	connectingSince = Date.now();
+	applyDnsFamily();
 
 	try {
-		await client.connect();
+		await Promise.race([
+			client.connect(),
+			new Promise((_, reject) => {
+				setTimeout(() => reject(new Error("timeout connexion IRC 10s")), 10000);
+			})
+		]);
 	} catch (error) {
 		connected = false;
+		rememberError(error);
 		console.error(
 			`[TWITCH] Échec de connexion (essai ${connectAttempt}) :`,
-			getErrorText(error)
+			lastIrcError
 		);
-		scheduleReconnect(Math.min(30000, 2000 * connectAttempt));
+		ipv4Only = !ipv4Only;
+		forceCloseIrc();
+		scheduleReconnect(Math.min(20000, 2000 * connectAttempt));
 	}
 }
 
 client.on("connected", (address, port) => {
 	connected = true;
 	connectAttempt = 0;
+	connectingSince = 0;
+	lastIrcError = "";
 	console.log(
 		`[TWITCH] Connecté ${address}:${port} — #${config.channel}`
 	);
@@ -260,6 +332,7 @@ module.exports = {
 	client,
 	isConnected: () => ircState() === "OPEN",
 	ircState,
+	lastError: () => lastIrcError,
 	isLive: () => liveWatcher.isLive(),
 	setDiscordClient,
 	shutdownTwitch

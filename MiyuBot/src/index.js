@@ -53,6 +53,9 @@ setHealthStatusProvider(() => ({
 	twitch_irc: twitchRuntime && typeof twitchRuntime.ircState === "function"
 		? twitchRuntime.ircState()
 		: "CLOSED",
+	twitch_last_error: twitchRuntime && typeof twitchRuntime.lastError === "function"
+		? twitchRuntime.lastError()
+		: "",
 	twitch_live: Boolean(
 		twitchRuntime &&
 		typeof twitchRuntime.isLive === "function" &&
