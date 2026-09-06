@@ -23,6 +23,32 @@ function envText(name, fallback = "") {
 	return value || fallback;
 }
 
+function envList(name) {
+	return envText(name)
+		.toLowerCase()
+		.split(/[,\s]+/)
+		.map((item) => item.replace(/^!/, ""))
+		.filter(Boolean);
+}
+
+function expandDisabledCommands(names) {
+	const aliases = {
+		so: ["shoutout"],
+		shoutout: ["so"],
+		help: ["commands"],
+		commands: ["help"]
+	};
+	const disabled = new Set(names);
+
+	for (const name of names) {
+		for (const alias of aliases[name] || []) {
+			disabled.add(alias);
+		}
+	}
+
+	return disabled;
+}
+
 function loadTwitchConfig() {
 	const enabled = envFlag("TWITCH_ENABLED", false);
 
@@ -38,6 +64,7 @@ function loadTwitchConfig() {
 		oauthToken,
 		channel,
 		prefix: envText("TWITCH_PREFIX", "!"),
+		disabledCommands: expandDisabledCommands(envList("TWITCH_DISABLED_COMMANDS")),
 		clientId: envText("TWITCH_CLIENT_ID"),
 		clientSecret: envText("TWITCH_CLIENT_SECRET"),
 		discordLiveChannelId: envText("TWITCH_DISCORD_LIVE_CHANNEL_ID"),

@@ -127,10 +127,19 @@ function createCommandRouter({
 		}
 
 		if (commandName === "help" || commandName === "commands") {
+			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "so"]
+				.filter((name) => !config.disabledCommands || !config.disabledCommands.has(name))
+				.map((name) => `!${name}`)
+				.join(" ");
+			const modCmds = ["permit", "timeout", "ban", "clear", "slow", "cmd"]
+				.filter((name) => !config.disabledCommands || !config.disabledCommands.has(name))
+				.map((name) => `!${name}`)
+				.join(" ");
+
 			await reply(
 				channel,
 				tags,
-				"Commandes : !ping !uptime !title !game !socials !discord !so. Modos : !permit !timeout !ban !clear !slow !cmd"
+				`Commandes : ${publicCmds || "aucune"}. Modos : ${modCmds || "aucune"}`
 			);
 			return;
 		}
@@ -436,6 +445,10 @@ function createCommandRouter({
 		const commandName = String(rawName || "").toLowerCase();
 
 		if (!commandName) {
+			return;
+		}
+
+		if (config.disabledCommands && config.disabledCommands.has(commandName)) {
 			return;
 		}
 

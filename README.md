@@ -47,6 +47,7 @@ Optionnel :
 | `TWITCH_DISCORD_INVITE` | lien envoyé par `!discord` |
 | `TWITCH_SOCIALS_URL` | lien envoyé par `!socials` |
 | `TWITCH_DISCORD_LIVE_CHANNEL_ID` | salon Discord pour l’annonce live |
+| `TWITCH_DISABLED_COMMANDS` | doublons à laisser à un autre bot (ex. WizeBot). Garder `so`, `discord`, `socials` sur MiyuBot |
 
 ---
 
@@ -66,6 +67,7 @@ TWITCH_ADS_TOKEN=
 TWITCH_DISCORD_LIVE_CHANNEL_ID=
 TWITCH_DISCORD_INVITE=
 TWITCH_SOCIALS_URL=
+TWITCH_DISABLED_COMMANDS=
 ```
 
 `PORT` et `HOST` : laissés à Fly. Après un secret, l’app redémarre.
