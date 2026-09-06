@@ -3,6 +3,10 @@ const {
     PermissionFlagsBits
 } = require("discord.js");
 
+const {
+    countWarnings
+} = require("../../database/database");
+
 
 module.exports = {
     name: "userinfo",
@@ -280,6 +284,19 @@ module.exports = {
                         rolesText,
                     inline:
                         false
+                },
+                {
+                    name:
+                        "⚠️ Avertissements",
+                    value:
+                        String(
+                            await countWarnings(
+                                message.guild.id,
+                                user.id
+                            )
+                        ),
+                    inline:
+                        true
                 }
             )
             .setFooter({

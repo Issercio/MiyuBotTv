@@ -4,7 +4,8 @@ const {
     Collection,
     AuditLogEvent,
     PermissionsBitField,
-    Partials
+    Partials,
+    ActivityType
 } = require("discord.js");
 
 const fs = require("fs");
@@ -18,12 +19,19 @@ const {
     run,
     get,
     databaseReady,
-    claimCommand
+    claimCommand,
+    createModerationCase
 } = require("./database/database");
 
 const {
     activateLockdown
 } = require("./security/lockdown");
+
+const {
+    snapshotChannel,
+    snapshotRole,
+    restoreRecentDeletions
+} = require("./security/recovery");
 
 const {
     sendSecurityLog,
@@ -108,6 +116,15 @@ for (const file of commandFiles) {
             command.name,
             command
         );
+
+        if (Array.isArray(command.aliases)) {
+            for (const alias of command.aliases) {
+                client.commands.set(
+                    String(alias).toLowerCase(),
+                    command
+                );
+            }
+        }
 
         console.log(
             `📦 Commande chargée : ${command.name}`
@@ -311,51 +328,6 @@ async function createSecurityIncident(
     console.log(
         `🚨 Incident de sécurité créé : #${result.lastID} | ` +
         `${incidentType} | ${severity}`
-    );
-
-    return result.lastID;
-}
-
-
-async function createModerationCase(
-    guildId,
-    userId,
-    actorId,
-    caseType,
-    action,
-    reason,
-    metadata = {}
-) {
-    if (!guildId || !userId || !caseType || !action) {
-        return null;
-    }
-
-    const result = await run(
-        `
-        INSERT INTO moderation_cases (
-            guild_id,
-            user_id,
-            actor_id,
-            case_type,
-            action,
-            reason,
-            metadata,
-            status,
-            created_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-            guildId,
-            userId,
-            actorId || null,
-            caseType,
-            action,
-            reason || null,
-            JSON.stringify(metadata),
-            "open",
-            Date.now()
-        ]
     );
 
     return result.lastID;
@@ -1594,6 +1566,53 @@ async function processAntiNukeAction(
             ]
         }
     );
+
+    if (sanctionResult.success) {
+        const restored = await restoreRecentDeletions(
+            guild,
+            actionType,
+            windowSeconds * 1000
+        );
+
+        if (restored.length > 0) {
+            await sendSecurityLog(
+                guild,
+                {
+                    title: "Nuke Recovery",
+                    style: "wick",
+                    level: "critical",
+                    actor: executor,
+                    description:
+                        "MiyuBot a recréé les éléments supprimés pendant l'attaque.",
+                    fields: [
+                        {
+                            name: "Restored",
+                            value: restored.join("\n").slice(0, 1000),
+                            inline: false
+                        }
+                    ]
+                }
+            );
+        }
+
+        if (Number(settings.auto_lockdown) === 1) {
+            try {
+                await activateLockdown(
+                    guild,
+                    "Anti-nuke: lockdown automatique",
+                    {
+                        executor_id: executor.id,
+                        incident_id: incidentId
+                    }
+                );
+            } catch (error) {
+                console.error(
+                    "❌ Lockdown auto après anti-nuke :",
+                    error
+                );
+            }
+        }
+    }
 }
 
 
@@ -1678,6 +1697,12 @@ function detectSpamReasons(
     const mentionCount =
         message.mentions.users.size +
         message.mentions.roles.size;
+
+    if (message.mentions.everyone) {
+        reasons.push(
+            "mention everyone/here"
+        );
+    }
 
     if (mentionCount >= 5) {
         reasons.push(
@@ -3390,6 +3415,8 @@ client.on(
                 return;
             }
 
+            snapshotChannel(channel);
+
             const entry =
                 await findAuditEntry(
                     channel.guild,
@@ -3541,6 +3568,70 @@ client.on(
 
 /*
  * ============================================================
+ * THREADS
+ * ============================================================
+ */
+
+client.on(
+    "threadCreate",
+    async (thread) => {
+        try {
+            if (!thread.guild) {
+                return;
+            }
+
+            await logChannelEvent(
+                thread.guild,
+                "create",
+                thread,
+                {
+                    title: "Thread Created",
+                    level: "info",
+                    description:
+                        thread.parentId
+                            ? `Fil créé dans <#${thread.parentId}>.`
+                            : "Un fil a été créé."
+                }
+            );
+        } catch (error) {
+            console.error(
+                "❌ Erreur threadCreate :",
+                error
+            );
+        }
+    }
+);
+
+
+client.on(
+    "threadDelete",
+    async (thread) => {
+        try {
+            if (!thread.guild) {
+                return;
+            }
+
+            await logChannelEvent(
+                thread.guild,
+                "delete",
+                thread,
+                {
+                    title: "Thread Deleted",
+                    level: "warning"
+                }
+            );
+        } catch (error) {
+            console.error(
+                "❌ Erreur threadDelete :",
+                error
+            );
+        }
+    }
+);
+
+
+/*
+ * ============================================================
  * CRÉATION RÔLE
  * ============================================================
  */
@@ -3617,6 +3708,8 @@ client.on(
     "roleDelete",
     async (role) => {
         try {
+            snapshotRole(role);
+
             const entry =
                 await findAuditEntry(
                     role.guild,
@@ -3783,6 +3876,13 @@ client.on(
             }
 
             if (!deletedMessage.guild) {
+                return;
+            }
+
+            if (
+                deletedMessage.author?.id &&
+                deletedMessage.author.id === client.user?.id
+            ) {
                 return;
             }
 
@@ -4917,10 +5017,7 @@ client.on(
             );
 
         if (!command) {
-            return message.reply(
-                "❌ Cette commande n'existe pas.\n" +
-                "Utilise `!help` pour voir les commandes."
-            );
+            return;
         }
 
         const isAdmin =
@@ -4935,14 +5032,27 @@ client.on(
             "userinfo"
         ];
 
-        if (
-            !publicCommands.includes(commandName) &&
-            !isAdmin
-        ) {
-            return message.reply(
-                "❌ Cette commande est réservée aux administrateurs.\n" +
-                "Utilise `!help` pour voir les commandes disponibles pour ton rôle."
-            );
+        if (!publicCommands.includes(command.name)) {
+            if (command.permission) {
+                if (
+                    !isAdmin &&
+                    (
+                        !message.member ||
+                        !message.member.permissions.has(
+                            command.permission
+                        )
+                    )
+                ) {
+                    return message.reply(
+                        "❌ Il te manque la permission pour cette commande."
+                    );
+                }
+            } else if (!isAdmin) {
+                return message.reply(
+                    "❌ Cette commande est réservée aux administrateurs.\n" +
+                    "Utilise `!help` pour voir les commandes disponibles pour ton rôle."
+                );
+            }
         }
 
         try {
@@ -5090,6 +5200,16 @@ client.once(
             console.log(
                 "🗄️ Base de données prête."
             );
+
+            client.user.setPresence({
+                activities: [
+                    {
+                        name: "!help • sécurité",
+                        type: ActivityType.Watching
+                    }
+                ],
+                status: "online"
+            });
 
             console.log(
                 `🤖 MiyuBot est connecté à Discord en tant que ${client.user.tag}`

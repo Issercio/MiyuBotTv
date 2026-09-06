@@ -38,6 +38,10 @@ const REQUIRED_BOT_PERMISSIONS = [
         flag: PermissionFlagsBits.BanMembers
     },
     {
+        label: "Gerer les messages",
+        flag: PermissionFlagsBits.ManageMessages
+    },
+    {
         label: "Voir les salons",
         flag: PermissionFlagsBits.ViewChannel
     },

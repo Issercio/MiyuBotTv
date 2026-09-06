@@ -1024,11 +1024,126 @@ async function claimCommand(messageId) {
 }
 
 
+async function createModerationCase(
+    guildId,
+    userId,
+    actorId,
+    caseType,
+    action,
+    reason,
+    metadata = {}
+) {
+    if (!guildId || !userId || !caseType || !action) {
+        return null;
+    }
+
+    await databaseReady;
+
+    const result = await run(
+        `
+        INSERT INTO moderation_cases (
+            guild_id,
+            user_id,
+            actor_id,
+            case_type,
+            action,
+            reason,
+            metadata,
+            status,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+            guildId,
+            userId,
+            actorId || null,
+            caseType,
+            action,
+            reason || null,
+            JSON.stringify(metadata || {}),
+            "open",
+            Date.now()
+        ]
+    );
+
+    return result.lastID;
+}
+
+
+async function addWarning(guildId, userId, moderatorId, reason) {
+    await databaseReady;
+
+    const result = await run(
+        `
+        INSERT INTO warnings (
+            guild_id,
+            user_id,
+            moderator_id,
+            reason,
+            created_at,
+            active
+        )
+        VALUES (?, ?, ?, ?, ?, 1)
+        `,
+        [
+            guildId,
+            userId,
+            moderatorId,
+            reason || null,
+            Date.now()
+        ]
+    );
+
+    return result.lastID;
+}
+
+
+async function listWarnings(guildId, userId, limit = 10) {
+    await databaseReady;
+
+    return all(
+        `
+        SELECT id, moderator_id, reason, created_at, active
+        FROM warnings
+        WHERE guild_id = ?
+        AND user_id = ?
+        AND active = 1
+        ORDER BY created_at DESC
+        LIMIT ?
+        `,
+        [guildId, userId, limit]
+    );
+}
+
+
+async function countWarnings(guildId, userId) {
+    await databaseReady;
+
+    const row = await get(
+        `
+        SELECT COUNT(*) AS total
+        FROM warnings
+        WHERE guild_id = ?
+        AND user_id = ?
+        AND active = 1
+        `,
+        [guildId, userId]
+    );
+
+    return Number(row?.total || 0);
+}
+
+
 module.exports = {
     db,
     run,
     get,
     all,
     databaseReady,
-    claimCommand
+    claimCommand,
+    createModerationCase,
+    addWarning,
+    listWarnings,
+    countWarnings
 };
