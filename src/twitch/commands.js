@@ -129,28 +129,13 @@ function createCommandRouter({
 		}
 
 		if (commandName === "socials") {
-			const parts = [];
+			const socialsUrl =
+				config.socialsUrl ||
+				"https://sociallinks.edgeone.dev";
 
-			if (config.discordInvite) {
-				parts.push(`Discord ${config.discordInvite}`);
-			}
-
-			if (config.twitter) {
-				parts.push(`X ${config.twitter}`);
-			}
-
-			if (config.youtube) {
-				parts.push(`YouTube ${config.youtube}`);
-			}
-
-			if (config.tiktok) {
-				parts.push(`TikTok ${config.tiktok}`);
-			}
-
-			await reply(
+			await queue.say(
 				channel,
-				tags,
-				parts.length ? parts.join(" | ") : "Aucun réseau configuré."
+				`Tous les réseaux de Kitsunara → ${socialsUrl}`
 			);
 			return;
 		}
