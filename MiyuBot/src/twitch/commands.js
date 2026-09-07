@@ -46,7 +46,7 @@ function publicDiscordInvite(raw) {
 		return `https://discord.com/invite/${match[1]}`;
 	}
 
-	return value || "https://discord.com/invite/7KyxTPEwXv";
+	return value || "https://discord.com/invite/p28XZRrqbJ";
 }
 
 function createCommandRouter({
