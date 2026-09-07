@@ -89,20 +89,15 @@ function createAdsWatcher({
 				return;
 			}
 
-			if (warnedForAdAt === nextAdAt) {
+			if (warnedForAdAt && Math.abs(warnedForAdAt - nextAdAt) < 90000) {
 				return;
 			}
 
 			warnedForAdAt = nextAdAt;
 
-			const seconds = Math.max(
-				1,
-				Math.round(remainingMs / 1000)
-			);
-
 			await queue.say(
 				`#${config.channel}`,
-				`Votre attention : dans ${seconds}s une pub automatique va se lancer. Merci pour votre soutien !`
+				`Votre attention : dans ${config.adWarningSeconds}s une pub automatique va se lancer. Merci pour votre soutien !`
 			);
 		} catch (error) {
 			console.warn(

@@ -6,6 +6,13 @@ const {
 } = require("../database/database");
 
 const { isPrivileged } = require("./automod");
+const { isForeignSharedChat } = require("./sharedChat");
+
+const ME_TEXT =
+	"🦊 Miyu Yumé, renarde astrale un peu tête en l’air, passionnée par les jeux, " +
+	"le dessin et les univers fantastiques. 🌸 Je peux rire pour absolument rien, " +
+	"paniquer devant un jeu d’horreur et partir dans 15 sujets en 5 minutes. " +
+	"🌙✨ Bienvenue dans mon petit coin de Kitsunara !";
 
 const BUILTIN_NAMES = new Set([
 	"ping",
@@ -17,6 +24,7 @@ const BUILTIN_NAMES = new Set([
 	"shoutout",
 	"socials",
 	"discord",
+	"me",
 	"cmd",
 	"commands",
 	"permit",
@@ -127,7 +135,7 @@ function createCommandRouter({
 		}
 
 		if (commandName === "help" || commandName === "commands") {
-			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "so"]
+			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "me", "so"]
 				.filter((name) => !config.disabledCommands || !config.disabledCommands.has(name))
 				.map((name) => `!${name}`)
 				.join(" ");
@@ -165,6 +173,11 @@ function createCommandRouter({
 				"Papotages, creations, chill et bonne humeur t'attendent " +
 				`sous les cerisiers → ${invite}`
 			);
+			return;
+		}
+
+		if (commandName === "me") {
+			await queue.say(channel, ME_TEXT);
 			return;
 		}
 
@@ -431,6 +444,10 @@ function createCommandRouter({
 
 	async function handleMessage(channel, tags, message, self) {
 		if (self) {
+			return;
+		}
+
+		if (isForeignSharedChat(tags)) {
 			return;
 		}
 

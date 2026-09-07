@@ -73,7 +73,7 @@ describe("batterie Twitch", () => {
     test("commandes publiques et modos présentes", () => {
         for (const name of [
             "ping", "help", "uptime", "title", "game", "so",
-            "discord", "socials", "permit", "timeout", "ban", "cmd"
+            "discord", "socials", "me", "permit", "timeout", "ban", "cmd"
         ]) {
             assert.match(commands, new RegExp(`"${name}"`), name);
         }
@@ -84,6 +84,8 @@ describe("batterie Twitch", () => {
         assert.match(commands, /sanctuaire de Kitsunara/);
         assert.match(commands, /sociallinks\.edgeone\.dev/);
         assert.match(commands, /discord\.com\/invite/);
+        assert.match(commands, /petit coin de Kitsunara/);
+        assert.match(commands, /isForeignSharedChat/);
         assert.match(read("src/twitch/chatQueue.js"), /chat say timeout/);
     });
 
@@ -92,6 +94,8 @@ describe("batterie Twitch", () => {
         assert.match(helix, /channels\/ads/);
         assert.match(ads, /pub automatique va se lancer/);
         assert.match(ads, /adWarningSeconds/);
+        assert.match(ads, /Math\.abs\(warnedForAdAt - nextAdAt\)/);
+        assert.doesNotMatch(ads, /remainingMs \/ 1000/);
         assert.match(twitch, /createAdsWatcher/);
         assert.match(twitch, /adsWatcher\.start/);
     });
@@ -103,6 +107,9 @@ describe("batterie Twitch", () => {
         assert.match(nestedAds, /pub automatique va se lancer/);
         assert.match(nestedCmd, /sentiers lumineux/);
         assert.match(nestedCmd, /discord\.com\/invite/);
+        assert.match(nestedCmd, /petit coin de Kitsunara/);
+        assert.match(nestedCmd, /isForeignSharedChat/);
+        assert.match(nestedAds, /Math\.abs\(warnedForAdAt - nextAdAt\)/);
         assert.match(read("MiyuBot/src/twitch/chatQueue.js"), /chat say timeout/);
         assert.match(nestedTwitch, /family: 4/);
         assert.match(nestedTwitch, /Cannot disconnect/);
