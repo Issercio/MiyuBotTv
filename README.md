@@ -49,6 +49,8 @@ Optionnel :
 | `TWITCH_DISCORD_LIVE_CHANNEL_ID` | salon Discord pour l’annonce live |
 | `TWITCH_DISABLED_COMMANDS` | doublons à laisser à un autre bot (ex. WizeBot). Garder `so`, `discord`, `socials` sur MiyuBot |
 
+En tchat partagé, MiyuBot ignore les commandes et liens venant des autres chaînes. Les réponses (`!discord`, etc.) partent en **visible uniquement sur ta chaîne** (Helix `for_source_only`), comme WizeBot. Ça demande `TWITCH_CLIENT_ID` + `TWITCH_CLIENT_SECRET` et le scope `user:write:chat` sur le token d’app du bot.
+
 ---
 
 ## 4. Secrets Fly (à remplir toi-même)

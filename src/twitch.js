@@ -13,6 +13,7 @@ const { createAutomod } = require("./twitch/automod");
 const { createCommandRouter } = require("./twitch/commands");
 const { createLiveWatcher } = require("./twitch/liveWatcher");
 const { createAdsWatcher } = require("./twitch/adsWatcher");
+const { isForeignSharedChat } = require("./twitch/sharedChat");
 
 const config = loadTwitchConfig();
 
@@ -102,8 +103,10 @@ const client = new tmi.Client({
 	}
 });
 
-const queue = createChatQueue(client, config.chatDelayMs);
 const helix = createHelix(config);
+const queue = createChatQueue(client, config.chatDelayMs, (text) =>
+	helix.sendChatMessage(text, { sourceOnly: true })
+);
 const automod = createAutomod(config, client, queue);
 const commands = createCommandRouter({
 	config,
@@ -336,6 +339,14 @@ client.on("notice", (channel, msgid, message) => {
 
 client.on("message", async (channel, tags, message, self) => {
 	try {
+		if (self) {
+			return;
+		}
+
+		if (isForeignSharedChat(tags)) {
+			return;
+		}
+
 		const blocked = await automod.handle(channel, tags, message);
 
 		if (blocked) {

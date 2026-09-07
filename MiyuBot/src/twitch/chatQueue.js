@@ -17,7 +17,7 @@ function withTimeout(promise, ms, label) {
 	});
 }
 
-function createChatQueue(client, delayMs) {
+function createChatQueue(client, delayMs, sendPreferred) {
 	let chain = Promise.resolve();
 	let lastSentAt = 0;
 
@@ -48,6 +48,14 @@ function createChatQueue(client, delayMs) {
 		}
 
 		return enqueue(async () => {
+			if (typeof sendPreferred === "function") {
+				const sent = await sendPreferred(text);
+
+				if (sent) {
+					return true;
+				}
+			}
+
 			await withTimeout(
 				Promise.resolve(client.say(channel, text)),
 				SAY_TIMEOUT_MS,

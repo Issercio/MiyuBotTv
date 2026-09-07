@@ -108,5 +108,10 @@ describe("batterie Twitch", () => {
         assert.match(nestedTwitch, /Cannot disconnect/);
         assert.match(read("src/twitch.js"), /family: 4/);
         assert.match(read("src/index.js"), /twitch_last_error/);
+        assert.match(read("src/twitch/sharedChat.js"), /source-room-id/);
+        assert.match(read("src/twitch.js"), /isForeignSharedChat/);
+        assert.match(read("src/twitch/helix.js"), /for_source_only/);
+        assert.match(read("MiyuBot/src/twitch/sharedChat.js"), /source-room-id/);
+        assert.match(nestedTwitch, /isForeignSharedChat/);
     });
 });

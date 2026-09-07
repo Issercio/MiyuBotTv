@@ -1,6 +1,8 @@
 const LINK_REGEX = /https?:\/\/|www\.|(?:^|\s)(?:discord\.gg|t\.co|bit\.ly)\/|\b[a-z0-9-]+\.(?:com|net|org|gg|tv|xyz|io)\b/i;
 const ALLOWED_LINK_REGEX = /(?:clips\.twitch\.tv|twitch\.tv\/[a-z0-9_]+\/clip|youtu\.be|youtube\.com)/i;
 
+const { isSharedChatStreamer } = require("./sharedChat");
+
 function isPrivileged(tags, channelName) {
 	const badges = tags.badges || {};
 	const username = String(tags.username || "").toLowerCase();
@@ -9,6 +11,7 @@ function isPrivileged(tags, channelName) {
 		tags.mod ||
 		badges.broadcaster ||
 		badges.moderator ||
+		isSharedChatStreamer(tags) ||
 		username === String(channelName || "").toLowerCase()
 	);
 }
@@ -79,6 +82,10 @@ function createAutomod(config, client, queue) {
 
 	async function handle(channel, tags, message) {
 		if (!config.automod.enabled) {
+			return false;
+		}
+
+		if (isSharedChatStreamer(tags)) {
 			return false;
 		}
 

@@ -111,3 +111,28 @@ describe("handler slash", () => {
         assert.match(text, /commandes \*\*slash\*\*/);
     });
 });
+
+describe("tchat partagé Twitch", () => {
+    const { isForeignSharedChat, isSharedChatStreamer } = require("../src/twitch/sharedChat");
+
+    test("ignore les messages venant d'une autre chaîne", () => {
+        assert.equal(
+            isForeignSharedChat({ "room-id": "1", "source-room-id": "2" }),
+            true
+        );
+        assert.equal(
+            isForeignSharedChat({ "room-id": "1", "source-room-id": "1" }),
+            false
+        );
+        assert.equal(isForeignSharedChat({ "room-id": "1" }), false);
+    });
+
+    test("reconnaît un streameur du tchat partagé", () => {
+        assert.equal(
+            isSharedChatStreamer({ "source-badges": "broadcaster/1,subscriber/0" }),
+            true
+        );
+        assert.equal(isSharedChatStreamer({ badges: { moderator: "1" } }), false);
+        assert.equal(isSharedChatStreamer({ badges: { broadcaster: "1" } }), true);
+    });
+});

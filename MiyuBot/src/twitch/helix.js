@@ -239,6 +239,97 @@ function createHelix(config) {
 		return `${minutes}m`;
 	}
 
+	async function helixPost(path, body) {
+		const token = await getAppToken();
+
+		if (!token) {
+			return {
+				status: 0,
+				json: {}
+			};
+		}
+
+		const payload = JSON.stringify(body);
+
+		return requestJson({
+			method: "POST",
+			hostname: "api.twitch.tv",
+			path,
+			headers: {
+				"Client-Id": config.clientId,
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+				"Content-Length": Buffer.byteLength(payload)
+			},
+			body: payload
+		});
+	}
+
+	let botUserId = "";
+	let channelUserId = "";
+	let sendChatWarned = false;
+
+	async function resolveChatIds() {
+		if (!botUserId) {
+			const bot = await getUser(config.username);
+			botUserId = bot && bot.id ? bot.id : "";
+		}
+
+		if (!channelUserId) {
+			const channelUser = await getUser(config.channel);
+			channelUserId = channelUser && channelUser.id ? channelUser.id : "";
+		}
+
+		return {
+			botUserId,
+			channelUserId
+		};
+	}
+
+	async function sendChatMessage(text, { sourceOnly = true } = {}) {
+		const message = String(text || "").trim().slice(0, 490);
+
+		if (!message || !config.clientId || !config.clientSecret) {
+			return false;
+		}
+
+		try {
+			const ids = await resolveChatIds();
+
+			if (!ids.botUserId || !ids.channelUserId) {
+				return false;
+			}
+
+			const result = await helixPost("/helix/chat/messages", {
+				broadcaster_id: ids.channelUserId,
+				sender_id: ids.botUserId,
+				message,
+				for_source_only: sourceOnly
+			});
+
+			const sent = Boolean(
+				result.status === 200 &&
+				result.json &&
+				Array.isArray(result.json.data) &&
+				result.json.data[0] &&
+				result.json.data[0].is_sent !== false
+			);
+
+			if (!sent && !sendChatWarned) {
+				sendChatWarned = true;
+				console.warn(
+					"[TWITCH] Envoi Helix (tchat partagé / visible chaîne seule) refusé :",
+					result.status,
+					result.json && result.json.message
+				);
+			}
+
+			return sent;
+		} catch (_error) {
+			return false;
+		}
+	}
+
 	return {
 		available: Boolean(config.clientId && config.clientSecret),
 		getUser,
@@ -246,6 +337,7 @@ function createHelix(config) {
 		getChannel,
 		getGame,
 		getAdSchedule,
+		sendChatMessage,
 		formatUptime
 	};
 }
