@@ -14,6 +14,10 @@ const ME_TEXT =
 	"paniquer devant un jeu d’horreur et partir dans 15 sujets en 5 minutes. " +
 	"🌙✨ Bienvenue dans mon petit coin de Kitsunara !";
 
+const LURK_TEXT =
+	"🦊🌙 Miyu te glisse un coussin sous les cerisiers. Pose-toi en lurk, " +
+	"Kitsunara veille sur toi. Merci d'être là, même en silence ! ✨";
+
 const BUILTIN_NAMES = new Set([
 	"ping",
 	"help",
@@ -25,6 +29,7 @@ const BUILTIN_NAMES = new Set([
 	"socials",
 	"discord",
 	"me",
+	"lurk",
 	"cmd",
 	"commands",
 	"permit",
@@ -135,7 +140,7 @@ function createCommandRouter({
 		}
 
 		if (commandName === "help" || commandName === "commands") {
-			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "me", "so"]
+			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "me", "lurk", "so"]
 				.filter((name) => !config.disabledCommands || !config.disabledCommands.has(name))
 				.map((name) => `!${name}`)
 				.join(" ");
@@ -178,6 +183,11 @@ function createCommandRouter({
 
 		if (commandName === "me") {
 			await queue.say(channel, ME_TEXT);
+			return;
+		}
+
+		if (commandName === "lurk") {
+			await reply(channel, tags, LURK_TEXT);
 			return;
 		}
 

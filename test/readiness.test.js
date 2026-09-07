@@ -73,7 +73,7 @@ describe("batterie Twitch", () => {
     test("commandes publiques et modos présentes", () => {
         for (const name of [
             "ping", "help", "uptime", "title", "game", "so",
-            "discord", "socials", "me", "permit", "timeout", "ban", "cmd"
+            "discord", "socials", "me", "lurk", "permit", "timeout", "ban", "cmd"
         ]) {
             assert.match(commands, new RegExp(`"${name}"`), name);
         }
@@ -85,6 +85,7 @@ describe("batterie Twitch", () => {
         assert.match(commands, /sociallinks\.edgeone\.dev/);
         assert.match(commands, /discord\.com\/invite/);
         assert.match(commands, /petit coin de Kitsunara/);
+        assert.match(commands, /Pose-toi en lurk/);
         assert.match(commands, /isForeignSharedChat/);
         assert.match(read("src/twitch/chatQueue.js"), /chat say timeout/);
     });
@@ -108,6 +109,7 @@ describe("batterie Twitch", () => {
         assert.match(nestedCmd, /sentiers lumineux/);
         assert.match(nestedCmd, /discord\.com\/invite/);
         assert.match(nestedCmd, /petit coin de Kitsunara/);
+        assert.match(nestedCmd, /Pose-toi en lurk/);
         assert.match(nestedCmd, /isForeignSharedChat/);
         assert.match(nestedAds, /Math\.abs\(warnedForAdAt - nextAdAt\)/);
         assert.match(read("MiyuBot/src/twitch/chatQueue.js"), /chat say timeout/);
