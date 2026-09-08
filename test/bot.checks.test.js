@@ -96,6 +96,15 @@ describe("README slash", () => {
         assert.match(text, /\/securitylogs/);
         assert.match(text, /slash/i);
     });
+
+    test("indique où récupérer les tokens sans URL d'app perso", () => {
+        assert.match(text, /discord\.com\/developers\/applications/);
+        assert.match(text, /dev\.twitch\.tv\/console\/apps/);
+        assert.match(text, /twitchtokengenerator\.com/);
+        assert.match(text, /id\.twitch\.tv\/oauth2\/authorize/);
+        assert.doesNotMatch(text, /miyubottv\.fly\.dev/);
+        assert.doesNotMatch(text, /discord\.gg\/[A-Za-z0-9]/);
+    });
 });
 
 describe("handler slash", () => {
