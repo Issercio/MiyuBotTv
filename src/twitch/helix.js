@@ -252,12 +252,12 @@ function createHelix(config) {
 		const payload = body == null ? "" : JSON.stringify(body);
 		const headers = {
 			"Client-Id": config.clientId,
-			Authorization: `Bearer ${token}`
+			Authorization: `Bearer ${token}`,
+			"Content-Length": Buffer.byteLength(payload)
 		};
 
 		if (payload) {
 			headers["Content-Type"] = "application/json";
-			headers["Content-Length"] = Buffer.byteLength(payload);
 		}
 
 		return requestJson({
@@ -343,22 +343,7 @@ function createHelix(config) {
 	}
 
 	async function waitForClipUrl(clipId) {
-		const fallback = `https://clips.twitch.tv/${clipId}`;
-
-		for (let attempt = 0; attempt < 8; attempt += 1) {
-			await new Promise((resolve) => setTimeout(resolve, 1500));
-
-			const data = await helixData(
-				`/helix/clips?id=${encodeURIComponent(clipId)}`
-			);
-			const clip = data && Array.isArray(data.data) ? data.data[0] : null;
-
-			if (clip) {
-				return clip.url || fallback;
-			}
-		}
-
-		return fallback;
+		return `https://clips.twitch.tv/${clipId}`;
 	}
 
 	async function createClip() {
@@ -371,61 +356,77 @@ function createHelix(config) {
 			};
 		}
 
-		const user = await getUser(config.channel);
+		try {
+			const user = await getUser(config.channel);
 
-		if (!user?.id) {
+			if (!user?.id) {
+				return {
+					ok: false,
+					reason: "id"
+				};
+			}
+
+			const result = await helixPost(
+				`/helix/clips?broadcaster_id=${encodeURIComponent(user.id)}&has_delay=false`,
+				null,
+				{ userToken: token }
+			);
+
+			if (result.status === 404) {
+				return {
+					ok: false,
+					reason: "offline"
+				};
+			}
+
+			if (result.status === 401 || result.status === 403) {
+				console.warn(
+					"[TWITCH] Clip refusé :",
+					result.status,
+					result.json && (result.json.message || result.json.error)
+				);
+				return {
+					ok: false,
+					reason: "scope"
+				};
+			}
+
+			if (result.status === 429) {
+				return {
+					ok: false,
+					reason: "rate"
+				};
+			}
+
+			const created =
+				result.json && Array.isArray(result.json.data)
+					? result.json.data[0]
+					: null;
+
+			if ((result.status !== 202 && result.status !== 200) || !created?.id) {
+				console.warn(
+					"[TWITCH] Clip échec :",
+					result.status,
+					result.json && (result.json.message || result.json.error)
+				);
+				return {
+					ok: false,
+					reason: "fail"
+				};
+			}
+
 			return {
-				ok: false,
-				reason: "id"
+				ok: true,
+				id: created.id,
+				url: await waitForClipUrl(created.id)
 			};
-		}
-
-		const result = await helixPost(
-			`/helix/clips?broadcaster_id=${encodeURIComponent(user.id)}&has_delay=false`,
-			null,
-			{ userToken: token }
-		);
-
-		if (result.status === 404) {
-			return {
-				ok: false,
-				reason: "offline"
-			};
-		}
-
-		if (result.status === 401 || result.status === 403) {
-			return {
-				ok: false,
-				reason: "scope"
-			};
-		}
-
-		if (result.status === 429) {
-			return {
-				ok: false,
-				reason: "rate"
-			};
-		}
-
-		const created =
-			result.json && Array.isArray(result.json.data)
-				? result.json.data[0]
-				: null;
-
-		if ((result.status !== 202 && result.status !== 200) || !created?.id) {
+		} catch (error) {
+			console.warn("[TWITCH] Clip erreur :", error.message || error);
 			return {
 				ok: false,
 				reason: "fail"
 			};
 		}
-
-		const url = await waitForClipUrl(created.id);
-
-		return {
-			ok: true,
-			id: created.id,
-			url
-		};
 	}
 
 	return {

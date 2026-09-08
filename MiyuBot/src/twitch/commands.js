@@ -213,6 +213,7 @@ function createCommandRouter({
 			}
 
 			lastClipAt = Date.now();
+			await reply(channel, tags, "🦊 Miyu capture cet instant...");
 			const clip = await helix.createClip();
 
 			if (!clip.ok) {
