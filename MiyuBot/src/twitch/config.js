@@ -76,6 +76,7 @@ function loadTwitchConfig() {
 			"https://sociallinks.edgeone.dev"
 		),
 		adsToken: envText("TWITCH_ADS_TOKEN").replace(/^oauth:/i, ""),
+		clipsToken: envText("TWITCH_CLIPS_TOKEN").replace(/^oauth:/i, ""),
 		adWarningSeconds: Math.max(5, envNumber("TWITCH_AD_WARNING_SECONDS", 30) || 30),
 		adsPollMs: envNumber("TWITCH_ADS_POLL_MS", 8000),
 		adWarningEnabled: envFlag("TWITCH_AD_WARNING", true),

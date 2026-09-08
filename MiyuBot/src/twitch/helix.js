@@ -239,8 +239,8 @@ function createHelix(config) {
 		return `${minutes}m`;
 	}
 
-	async function helixPost(path, body) {
-		const token = await getAppToken();
+	async function helixPost(path, body, { userToken = "" } = {}) {
+		const token = userToken || await getAppToken();
 
 		if (!token) {
 			return {
@@ -249,19 +249,23 @@ function createHelix(config) {
 			};
 		}
 
-		const payload = JSON.stringify(body);
+		const payload = body == null ? "" : JSON.stringify(body);
+		const headers = {
+			"Client-Id": config.clientId,
+			Authorization: `Bearer ${token}`
+		};
+
+		if (payload) {
+			headers["Content-Type"] = "application/json";
+			headers["Content-Length"] = Buffer.byteLength(payload);
+		}
 
 		return requestJson({
 			method: "POST",
 			hostname: "api.twitch.tv",
 			path,
-			headers: {
-				"Client-Id": config.clientId,
-				Authorization: `Bearer ${token}`,
-				"Content-Type": "application/json",
-				"Content-Length": Buffer.byteLength(payload)
-			},
-			body: payload
+			headers,
+			body: payload || undefined
 		});
 	}
 
@@ -330,6 +334,100 @@ function createHelix(config) {
 		}
 	}
 
+	function clipsUserToken() {
+		if (config.clipsToken) {
+			return config.clipsToken;
+		}
+
+		return adsUserToken();
+	}
+
+	async function waitForClipUrl(clipId) {
+		const fallback = `https://clips.twitch.tv/${clipId}`;
+
+		for (let attempt = 0; attempt < 8; attempt += 1) {
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+
+			const data = await helixData(
+				`/helix/clips?id=${encodeURIComponent(clipId)}`
+			);
+			const clip = data && Array.isArray(data.data) ? data.data[0] : null;
+
+			if (clip) {
+				return clip.url || fallback;
+			}
+		}
+
+		return fallback;
+	}
+
+	async function createClip() {
+		const token = clipsUserToken();
+
+		if (!token || !config.clientId) {
+			return {
+				ok: false,
+				reason: "token"
+			};
+		}
+
+		const user = await getUser(config.channel);
+
+		if (!user?.id) {
+			return {
+				ok: false,
+				reason: "id"
+			};
+		}
+
+		const result = await helixPost(
+			`/helix/clips?broadcaster_id=${encodeURIComponent(user.id)}&has_delay=false`,
+			null,
+			{ userToken: token }
+		);
+
+		if (result.status === 404) {
+			return {
+				ok: false,
+				reason: "offline"
+			};
+		}
+
+		if (result.status === 401 || result.status === 403) {
+			return {
+				ok: false,
+				reason: "scope"
+			};
+		}
+
+		if (result.status === 429) {
+			return {
+				ok: false,
+				reason: "rate"
+			};
+		}
+
+		const created =
+			result.json && Array.isArray(result.json.data)
+				? result.json.data[0]
+				: null;
+
+		if ((result.status !== 202 && result.status !== 200) || !created?.id) {
+			return {
+				ok: false,
+				reason: "fail"
+			};
+		}
+
+		const url = await waitForClipUrl(created.id);
+
+		return {
+			ok: true,
+			id: created.id,
+			url
+		};
+	}
+
 	return {
 		available: Boolean(config.clientId && config.clientSecret),
 		getUser,
@@ -337,6 +435,7 @@ function createHelix(config) {
 		getChannel,
 		getGame,
 		getAdSchedule,
+		createClip,
 		sendChatMessage,
 		formatUptime
 	};

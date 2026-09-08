@@ -73,7 +73,7 @@ describe("batterie Twitch", () => {
     test("commandes publiques et modos présentes", () => {
         for (const name of [
             "ping", "help", "uptime", "title", "game", "so",
-            "discord", "socials", "me", "lurk", "permit", "timeout", "ban", "cmd"
+            "discord", "socials", "me", "lurk", "clip", "permit", "timeout", "ban", "cmd"
         ]) {
             assert.match(commands, new RegExp(`"${name}"`), name);
         }
@@ -86,6 +86,9 @@ describe("batterie Twitch", () => {
         assert.match(commands, /discord\.com\/invite/);
         assert.match(commands, /petit coin de Kitsunara/);
         assert.match(commands, /Pose-toi en lurk/);
+        assert.match(commands, /Miyu a figé cet instant/);
+        assert.match(helix, /\/helix\/clips/);
+        assert.match(helix, /createClip/);
         assert.match(commands, /isForeignSharedChat/);
         assert.match(read("src/twitch/chatQueue.js"), /chat say timeout/);
     });

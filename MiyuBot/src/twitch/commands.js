@@ -30,6 +30,7 @@ const BUILTIN_NAMES = new Set([
 	"discord",
 	"me",
 	"lurk",
+	"clip",
 	"cmd",
 	"commands",
 	"permit",
@@ -71,6 +72,7 @@ function createCommandRouter({
 }) {
 	const globalCooldown = new Map();
 	const userCooldown = new Map();
+	let lastClipAt = 0;
 
 	function onCooldown(commandName, username) {
 		const now = Date.now();
@@ -140,7 +142,7 @@ function createCommandRouter({
 		}
 
 		if (commandName === "help" || commandName === "commands") {
-			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "me", "lurk", "so"]
+			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "me", "lurk", "clip", "so"]
 				.filter((name) => !config.disabledCommands || !config.disabledCommands.has(name))
 				.map((name) => `!${name}`)
 				.join(" ");
@@ -188,6 +190,74 @@ function createCommandRouter({
 
 		if (commandName === "lurk") {
 			await reply(channel, tags, LURK_TEXT);
+			return;
+		}
+
+		if (commandName === "clip") {
+			if (Date.now() - lastClipAt < 25000) {
+				await reply(
+					channel,
+					tags,
+					"Un clip vient d'être lancé, attends un petit moment."
+				);
+				return;
+			}
+
+			if (!helix.available || typeof helix.createClip !== "function") {
+				await reply(
+					channel,
+					tags,
+					"Clips non configurés (TWITCH_CLIENT_ID / TWITCH_CLIPS_TOKEN)."
+				);
+				return;
+			}
+
+			lastClipAt = Date.now();
+			const clip = await helix.createClip();
+
+			if (!clip.ok) {
+				lastClipAt = 0;
+
+				if (clip.reason === "offline") {
+					await reply(
+						channel,
+						tags,
+						"Pas de live pour l'instant, impossible de clipper."
+					);
+					return;
+				}
+
+				if (clip.reason === "token" || clip.reason === "scope") {
+					await reply(
+						channel,
+						tags,
+						"Clips non configurés. Il faut un token streamer avec le scope clips:edit."
+					);
+					return;
+				}
+
+				if (clip.reason === "rate") {
+					await reply(
+						channel,
+						tags,
+						"Trop de clips d'un coup, réessaie dans une minute."
+					);
+					return;
+				}
+
+				await reply(
+					channel,
+					tags,
+					"Miyu n'a pas réussi à figer ce moment. Réessaie un peu plus tard."
+				);
+				return;
+			}
+
+			await reply(
+				channel,
+				tags,
+				`🦊🎬 Miyu a figé cet instant ! Clip → ${clip.url}`
+			);
 			return;
 		}
 

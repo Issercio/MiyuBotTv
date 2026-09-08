@@ -37,6 +37,7 @@ Remplis **ton** `.env`. Ne commite jamais `.env`.
 | `TWITCH_CHANNEL` | ta **chaîne** | login sans `https://twitch.tv/` |
 | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | app Twitch | Helix (`!uptime`, `!title`, `!game`, `!so`) |
 | `TWITCH_ADS_TOKEN` | compte **streamer** | alerte pubs, scope `channel:read:ads` (pas le token IRC du bot) |
+| `TWITCH_CLIPS_TOKEN` | compte **streamer** (ou éditeur) | `!clip`, scope `clips:edit`. Peut réutiliser le token pubs si le scope est ajouté |
 
 Le bot doit être **modérateur** de la chaîne.
 
@@ -48,6 +49,7 @@ Optionnel :
 | `TWITCH_SOCIALS_URL` | lien envoyé par `!socials` |
 | `TWITCH_DISCORD_LIVE_CHANNEL_ID` | salon Discord pour l’annonce live |
 | `TWITCH_DISABLED_COMMANDS` | doublons à laisser à un autre bot (ex. WizeBot). Garder `so`, `discord`, `socials` sur MiyuBot |
+| `TWITCH_CLIPS_TOKEN` | token streamer/éditeur `clips:edit` pour `!clip` |
 
 En tchat partagé, MiyuBot ignore les commandes et liens venant des autres chaînes. Les réponses (`!discord`, etc.) partent en **visible uniquement sur ta chaîne** (Helix `for_source_only`), comme WizeBot. Ça demande `TWITCH_CLIENT_ID` + `TWITCH_CLIENT_SECRET` et le scope `user:write:chat` sur le token d’app du bot.
 
@@ -66,6 +68,7 @@ TWITCH_CHANNEL=
 TWITCH_CLIENT_ID=
 TWITCH_CLIENT_SECRET=
 TWITCH_ADS_TOKEN=
+TWITCH_CLIPS_TOKEN=
 TWITCH_DISCORD_LIVE_CHANNEL_ID=
 TWITCH_DISCORD_INVITE=
 TWITCH_SOCIALS_URL=
@@ -107,7 +110,7 @@ Preset `/securitylogs create` : anti-raid, anti-spam, anti-nuke, kick des compte
 
 Préfixe `!`.
 
-Tout le monde : `!ping` `!help` `!uptime` `!title` `!game` `!socials` `!discord`
+Tout le monde : `!ping` `!help` `!uptime` `!title` `!game` `!socials` `!discord` `!me` `!lurk` `!clip`
 
 Modos : `!so` / `!shoutout` `!permit` `!timeout` `!ban` `!unban` `!slow` `!slowoff` `!followers` `!followersoff` `!emoteonly` `!emoteonlyoff` `!clear` `!cmd add/remove/list`
 
@@ -119,6 +122,7 @@ Auto : alerte ~30 s avant une pub si `TWITCH_ADS_TOKEN` est valide. Automod view
 
 - SQLite est **vidée à chaque Deploy** Fly (warns, cases, whitelist, config). Le salon `miyubot-logs` est retrouvé par son nom.
 - `TWITCH_ADS_TOKEN` **expire**.
+- `TWITCH_CLIPS_TOKEN` **expire** (scope `clips:edit`).
 - Une instance seulement.
 
 Local (Fly arrêté) : `npm start` — tests : `npm test`
