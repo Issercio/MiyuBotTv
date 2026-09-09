@@ -107,8 +107,6 @@ describe("batterie Twitch", () => {
         assert.match(twitch, /adsWatcher\.start/);
         assert.match(twitch, /createDonateWatcher/);
         assert.match(twitch, /donateWatcher\.start/);
-        assert.match(read("src/twitch/chatQueue.js"), /tchat partagé \(sinon ça part partout\)/);
-        assert.match(read("src/twitch/helix.js"), /shared_chat\/session/);
     });
 
     test("copie Fly Twitch alignée", () => {

@@ -272,10 +272,6 @@ function createHelix(config) {
 	let botUserId = "";
 	let channelUserId = "";
 	let sendChatWarned = false;
-	let sharedChatCache = {
-		at: 0,
-		active: false
-	};
 
 	async function resolveChatIds() {
 		if (!botUserId) {
@@ -292,52 +288,6 @@ function createHelix(config) {
 			botUserId,
 			channelUserId
 		};
-	}
-
-	async function isSharedChatSession() {
-		if (Date.now() - sharedChatCache.at < 15000) {
-			return sharedChatCache.active;
-		}
-
-		try {
-			const ids = await resolveChatIds();
-
-			if (!ids.channelUserId) {
-				sharedChatCache = {
-					at: Date.now(),
-					active: true
-				};
-				return true;
-			}
-
-			const result = await helixGet(
-				`/helix/shared_chat/session?broadcaster_id=${encodeURIComponent(ids.channelUserId)}`
-			);
-			const session =
-				result &&
-				result.ok &&
-				result.json &&
-				Array.isArray(result.json.data)
-					? result.json.data[0]
-					: null;
-			const participants =
-				session && Array.isArray(session.participants)
-					? session.participants
-					: [];
-			const active = participants.length > 1;
-
-			sharedChatCache = {
-				at: Date.now(),
-				active
-			};
-			return active;
-		} catch (_error) {
-			sharedChatCache = {
-				at: Date.now(),
-				active: true
-			};
-			return true;
-		}
 	}
 
 	async function sendChatMessage(text, { sourceOnly = true } = {}) {
@@ -534,7 +484,6 @@ function createHelix(config) {
 		createClip,
 		sendChatMessage,
 		sendChatAnnouncement,
-		isSharedChatSession,
 		formatUptime
 	};
 }
