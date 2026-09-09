@@ -109,7 +109,8 @@ const queue = createChatQueue(
 	client,
 	config.chatDelayMs,
 	(text) => helix.sendChatMessage(text, { sourceOnly: true }),
-	(text) => helix.sendChatAnnouncement(text, { sourceOnly: true })
+	(text) => helix.sendChatAnnouncement(text, { sourceOnly: true }),
+	() => helix.isSharedChatSession()
 );
 const automod = createAutomod(config, client, queue);
 const commands = createCommandRouter({

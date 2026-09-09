@@ -17,7 +17,7 @@ function withTimeout(promise, ms, label) {
 	});
 }
 
-function createChatQueue(client, delayMs, sendPreferred, sendAnnouncement) {
+function createChatQueue(client, delayMs, sendPreferred, sendAnnouncement, isSharedChat) {
 	let chain = Promise.resolve();
 	let lastSentAt = 0;
 
@@ -40,6 +40,22 @@ function createChatQueue(client, delayMs, sendPreferred, sendAnnouncement) {
 		return chain;
 	}
 
+	async function sayViaIrc(channel, text) {
+		if (typeof isSharedChat === "function" && await isSharedChat()) {
+			console.warn(
+				"[TWITCH] Envoi IRC annulé : tchat partagé (sinon ça part partout)."
+			);
+			return false;
+		}
+
+		await withTimeout(
+			Promise.resolve(client.say(channel, text)),
+			SAY_TIMEOUT_MS,
+			"chat say timeout"
+		);
+		return true;
+	}
+
 	function say(channel, message) {
 		const text = String(message || "").trim().slice(0, 490);
 
@@ -56,12 +72,7 @@ function createChatQueue(client, delayMs, sendPreferred, sendAnnouncement) {
 				}
 			}
 
-			await withTimeout(
-				Promise.resolve(client.say(channel, text)),
-				SAY_TIMEOUT_MS,
-				"chat say timeout"
-			);
-			return true;
+			return sayViaIrc(channel, text);
 		});
 	}
 
@@ -89,12 +100,10 @@ function createChatQueue(client, delayMs, sendPreferred, sendAnnouncement) {
 				}
 			}
 
-			await withTimeout(
-				Promise.resolve(client.say(channel, text)),
-				SAY_TIMEOUT_MS,
-				"chat say timeout"
+			console.warn(
+				"[TWITCH] Annonce non envoyée : Helix requis (pas d'IRC, ça irait partout)."
 			);
-			return true;
+			return false;
 		});
 	}
 
