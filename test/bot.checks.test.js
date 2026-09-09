@@ -104,6 +104,10 @@ describe("README slash", () => {
         assert.match(text, /id\.twitch\.tv\/oauth2\/authorize/);
         assert.doesNotMatch(text, /miyubottv\.fly\.dev/);
         assert.doesNotMatch(text, /discord\.gg\/[A-Za-z0-9]/);
+        assert.match(text, /!donate/);
+        assert.match(text, /!clip/);
+        assert.match(text, /!lurk/);
+        assert.match(text, /!cmd add/);
     });
 });
 

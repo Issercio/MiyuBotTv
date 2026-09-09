@@ -164,13 +164,52 @@ Preset : anti-raid, anti-spam, anti-nuke, kick des comptes de moins de **30 jour
 
 ## Twitch — commandes
 
-Préfixe `!`.
+Préfixe `!`. En tchat partagé : les commandes des **autres** chaînes sont ignorées. Les réponses / annonces partent **uniquement sur ta chaîne**.
 
-Tout le monde : `!ping` `!help` `!uptime` `!title` `!game` `!socials` `!discord` `!me` `!lurk` `!clip` `!donate`
+### Tout le monde
 
-Modos : `!so` / `!shoutout` `!permit` `!timeout` `!ban` `!unban` `!slow` `!slowoff` `!followers` `!followersoff` `!emoteonly` `!emoteonlyoff` `!clear` `!cmd add/remove/list`
+| Commande | Rôle |
+|---|---|
+| `!ping` | Test : le bot est en ligne |
+| `!help` / `!commands` | Liste des commandes |
+| `!uptime` | Durée du live |
+| `!title` | Titre du stream |
+| `!game` | Jeu / catégorie |
+| `!socials` | Lien des réseaux (`TWITCH_SOCIALS_URL`) |
+| `!discord` | Invitation Discord (`TWITCH_DISCORD_INVITE`) |
+| `!me` | Présentation de Miyu |
+| `!lurk` | Petit message lurk (ping le viewer) |
+| `!clip` | Crée un clip du live (~25 s entre deux) |
+| `!donate` / `!donation` / `!kofi` | Annonce Ko-fi (bandeau, visible seulement sur ta chaîne) |
 
-Auto : alerte ~30 s avant une pub si `TWITCH_ADS_TOKEN` est valide. Annonce don Ko-fi **toutes les 45 min** en live (`!donate` aussi). Automod viewers : spam, caps, liens (clips/YouTube OK). `!clip` : 25 s entre deux clips réussis.
+### Modos / streamer
+
+| Commande | Rôle |
+|---|---|
+| `!so` / `!shoutout` `pseudo` | Shoutout |
+| `!permit` `pseudo` `[secondes]` | Autorise un lien (défaut 60 s) |
+| `!timeout` `pseudo` `[secondes]` `[raison]` | Timeout |
+| `!ban` `pseudo` `[raison]` | Ban |
+| `!unban` `pseudo` | Unban |
+| `!slow` `[secondes]` | Slow mode (défaut 5 s) |
+| `!slowoff` | Coupe le slow |
+| `!followers` `[minutes]` | Followers-only |
+| `!followersoff` | Coupe followers-only |
+| `!emoteonly` / `!emoteonlyoff` | Emote-only |
+| `!clear` | Efface le tchat |
+| `!cmd add` `nom` `texte` | Ajoute une commande perso |
+| `!cmd remove` `nom` | Supprime une commande perso |
+| `!cmd list` | Liste les commandes perso |
+
+Les commandes perso (`!cmd`) suivent le même filtre tchat partagé.
+
+`TWITCH_DISABLED_COMMANDS` : laisse des commandes à un autre bot (ex. `ping,help,uptime,title,game`). Ne pas y mettre `so`, `discord`, `socials`, `clip`, `donate` si tu les veux ici.
+
+### Auto (sans commande)
+
+- Alerte **~30 s** avant une pub auto (`TWITCH_ADS_TOKEN`).
+- Annonce don Ko-fi **toutes les 45 min** en live (première 45 min après le début du live).
+- Automod viewers : spam, caps, liens (clips / YouTube OK). Les streameurs du tchat partagé ne sont pas timeout pour un lien.
 
 ---
 
