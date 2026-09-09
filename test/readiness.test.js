@@ -73,7 +73,7 @@ describe("batterie Twitch", () => {
     test("commandes publiques et modos présentes", () => {
         for (const name of [
             "ping", "help", "uptime", "title", "game", "so",
-            "discord", "socials", "me", "lurk", "clip", "permit", "timeout", "ban", "cmd"
+            "discord", "socials", "me", "lurk", "clip", "donate", "permit", "timeout", "ban", "cmd"
         ]) {
             assert.match(commands, new RegExp(`"${name}"`), name);
         }
@@ -86,6 +86,9 @@ describe("batterie Twitch", () => {
         assert.match(commands, /discord\.com\/invite/);
         assert.match(commands, /petit coin de Kitsunara/);
         assert.match(commands, /Pose-toi en lurk/);
+        assert.match(commands, /ko-fi\.com\/princessekitsune/);
+        assert.match(commands, /queue\.announce/);
+        assert.match(helix, /chat\/announcements/);
         assert.match(commands, /Miyu a figé cet instant/);
         assert.match(helix, /\/helix\/clips/);
         assert.match(helix, /createClip/);
@@ -102,6 +105,9 @@ describe("batterie Twitch", () => {
         assert.doesNotMatch(ads, /remainingMs \/ 1000/);
         assert.match(twitch, /createAdsWatcher/);
         assert.match(twitch, /adsWatcher\.start/);
+        assert.match(twitch, /createDonateWatcher/);
+        assert.match(twitch, /donateWatcher\.start/);
+        assert.match(read("src/twitch/donateWatcher.js"), /donateIntervalMs/);
     });
 
     test("copie Fly Twitch alignée", () => {
@@ -113,6 +119,9 @@ describe("batterie Twitch", () => {
         assert.match(nestedCmd, /discord\.com\/invite/);
         assert.match(nestedCmd, /petit coin de Kitsunara/);
         assert.match(nestedCmd, /Pose-toi en lurk/);
+        assert.match(nestedCmd, /ko-fi\.com\/princessekitsune/);
+        assert.match(nestedCmd, /queue\.announce/);
+        assert.match(read("MiyuBot/src/twitch/helix.js"), /chat\/announcements/);
         assert.match(nestedCmd, /isForeignSharedChat/);
         assert.match(nestedAds, /Math\.abs\(warnedForAdAt - nextAdAt\)/);
         assert.match(read("MiyuBot/src/twitch/chatQueue.js"), /chat say timeout/);

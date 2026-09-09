@@ -334,6 +334,51 @@ function createHelix(config) {
 		}
 	}
 
+	let announceWarned = false;
+
+	async function sendChatAnnouncement(text, { sourceOnly = true, color = "purple" } = {}) {
+		const message = String(text || "").trim().slice(0, 500);
+
+		if (!message || !config.clientId || !config.clientSecret) {
+			return false;
+		}
+
+		try {
+			const ids = await resolveChatIds();
+
+			if (!ids.botUserId || !ids.channelUserId) {
+				return false;
+			}
+
+			const path =
+				`/helix/chat/announcements?broadcaster_id=${encodeURIComponent(ids.channelUserId)}` +
+				`&moderator_id=${encodeURIComponent(ids.botUserId)}`;
+
+			const result = await helixPost(path, {
+				message,
+				color,
+				for_source_only: sourceOnly
+			});
+
+			if (result.status === 204) {
+				return true;
+			}
+
+			if (!announceWarned) {
+				announceWarned = true;
+				console.warn(
+					"[TWITCH] Annonce Helix refusée :",
+					result.status,
+					result.json && (result.json.message || result.json.error)
+				);
+			}
+
+			return false;
+		} catch (_error) {
+			return false;
+		}
+	}
+
 	function clipsUserToken() {
 		if (config.clipsToken) {
 			return config.clipsToken;
@@ -438,6 +483,7 @@ function createHelix(config) {
 		getAdSchedule,
 		createClip,
 		sendChatMessage,
+		sendChatAnnouncement,
 		formatUptime
 	};
 }

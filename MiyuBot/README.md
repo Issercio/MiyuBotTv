@@ -166,11 +166,11 @@ Preset : anti-raid, anti-spam, anti-nuke, kick des comptes de moins de **30 jour
 
 Préfixe `!`.
 
-Tout le monde : `!ping` `!help` `!uptime` `!title` `!game` `!socials` `!discord` `!me` `!lurk` `!clip`
+Tout le monde : `!ping` `!help` `!uptime` `!title` `!game` `!socials` `!discord` `!me` `!lurk` `!clip` `!donate`
 
 Modos : `!so` / `!shoutout` `!permit` `!timeout` `!ban` `!unban` `!slow` `!slowoff` `!followers` `!followersoff` `!emoteonly` `!emoteonlyoff` `!clear` `!cmd add/remove/list`
 
-Auto : alerte ~30 s avant une pub si `TWITCH_ADS_TOKEN` est valide. Automod viewers : spam, caps, liens (clips/YouTube OK). `!clip` : 25 s entre deux clips réussis.
+Auto : alerte ~30 s avant une pub si `TWITCH_ADS_TOKEN` est valide. Annonce don Ko-fi **toutes les 45 min** en live (`!donate` aussi). Automod viewers : spam, caps, liens (clips/YouTube OK). `!clip` : 25 s entre deux clips réussis.
 
 ---
 

@@ -7,6 +7,7 @@ const {
 
 const { isPrivileged } = require("./automod");
 const { isForeignSharedChat } = require("./sharedChat");
+const { DONATE_TEXT } = require("./donateText");
 
 const ME_TEXT =
 	"🦊 Miyu Yumé, renarde astrale un peu tête en l’air, passionnée par les jeux, " +
@@ -31,6 +32,9 @@ const BUILTIN_NAMES = new Set([
 	"me",
 	"lurk",
 	"clip",
+	"donate",
+	"donation",
+	"kofi",
 	"cmd",
 	"commands",
 	"permit",
@@ -142,7 +146,7 @@ function createCommandRouter({
 		}
 
 		if (commandName === "help" || commandName === "commands") {
-			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "me", "lurk", "clip", "so"]
+			const publicCmds = ["ping", "uptime", "title", "game", "socials", "discord", "me", "lurk", "clip", "donate", "so"]
 				.filter((name) => !config.disabledCommands || !config.disabledCommands.has(name))
 				.map((name) => `!${name}`)
 				.join(" ");
@@ -190,6 +194,15 @@ function createCommandRouter({
 
 		if (commandName === "lurk") {
 			await reply(channel, tags, LURK_TEXT);
+			return;
+		}
+
+		if (
+			commandName === "donate" ||
+			commandName === "donation" ||
+			commandName === "kofi"
+		) {
+			await queue.announce(channel, DONATE_TEXT);
 			return;
 		}
 

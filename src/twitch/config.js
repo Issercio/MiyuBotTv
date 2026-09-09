@@ -36,7 +36,10 @@ function expandDisabledCommands(names) {
 		so: ["shoutout"],
 		shoutout: ["so"],
 		help: ["commands"],
-		commands: ["help"]
+		commands: ["help"],
+		donate: ["donation", "kofi"],
+		donation: ["donate", "kofi"],
+		kofi: ["donate", "donation"]
 	};
 	const disabled = new Set(names);
 
@@ -80,6 +83,11 @@ function loadTwitchConfig() {
 		adWarningSeconds: Math.max(5, envNumber("TWITCH_AD_WARNING_SECONDS", 30) || 30),
 		adsPollMs: envNumber("TWITCH_ADS_POLL_MS", 8000),
 		adWarningEnabled: envFlag("TWITCH_AD_WARNING", true),
+		donateAnnounceEnabled: envFlag("TWITCH_DONATE_ANNOUNCE", true),
+		donateIntervalMs: Math.max(
+			60000,
+			envNumber("TWITCH_DONATE_INTERVAL_MS", 45 * 60 * 1000) || 45 * 60 * 1000
+		),
 		commandCooldownMs: envNumber("TWITCH_COMMAND_COOLDOWN_MS", 2500),
 		userCooldownMs: envNumber("TWITCH_USER_COOLDOWN_MS", 4000),
 		chatDelayMs: envNumber("TWITCH_CHAT_DELAY_MS", 1600),

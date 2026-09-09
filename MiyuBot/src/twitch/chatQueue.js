@@ -17,7 +17,7 @@ function withTimeout(promise, ms, label) {
 	});
 }
 
-function createChatQueue(client, delayMs, sendPreferred) {
+function createChatQueue(client, delayMs, sendPreferred, sendAnnouncement) {
 	let chain = Promise.resolve();
 	let lastSentAt = 0;
 
@@ -65,8 +65,42 @@ function createChatQueue(client, delayMs, sendPreferred) {
 		});
 	}
 
+	function announce(channel, message) {
+		const text = String(message || "").trim().slice(0, 500);
+
+		if (!text) {
+			return Promise.resolve(false);
+		}
+
+		return enqueue(async () => {
+			if (typeof sendAnnouncement === "function") {
+				const sent = await sendAnnouncement(text);
+
+				if (sent) {
+					return true;
+				}
+			}
+
+			if (typeof sendPreferred === "function") {
+				const sent = await sendPreferred(text);
+
+				if (sent) {
+					return true;
+				}
+			}
+
+			await withTimeout(
+				Promise.resolve(client.say(channel, text)),
+				SAY_TIMEOUT_MS,
+				"chat say timeout"
+			);
+			return true;
+		});
+	}
+
 	return {
-		say
+		say,
+		announce
 	};
 }
 

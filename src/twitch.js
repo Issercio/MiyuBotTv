@@ -13,6 +13,7 @@ const { createAutomod } = require("./twitch/automod");
 const { createCommandRouter } = require("./twitch/commands");
 const { createLiveWatcher } = require("./twitch/liveWatcher");
 const { createAdsWatcher } = require("./twitch/adsWatcher");
+const { createDonateWatcher } = require("./twitch/donateWatcher");
 const { isForeignSharedChat } = require("./twitch/sharedChat");
 
 const config = loadTwitchConfig();
@@ -104,8 +105,11 @@ const client = new tmi.Client({
 });
 
 const helix = createHelix(config);
-const queue = createChatQueue(client, config.chatDelayMs, (text) =>
-	helix.sendChatMessage(text, { sourceOnly: true })
+const queue = createChatQueue(
+	client,
+	config.chatDelayMs,
+	(text) => helix.sendChatMessage(text, { sourceOnly: true }),
+	(text) => helix.sendChatAnnouncement(text, { sourceOnly: true })
 );
 const automod = createAutomod(config, client, queue);
 const commands = createCommandRouter({
@@ -136,6 +140,11 @@ const liveWatcher = createLiveWatcher({
 const adsWatcher = createAdsWatcher({
 	config,
 	helix,
+	queue,
+	isLive: () => liveWatcher.isLive()
+});
+const donateWatcher = createDonateWatcher({
+	config,
 	queue,
 	isLive: () => liveWatcher.isLive()
 });
@@ -306,6 +315,7 @@ client.on("connected", (address, port) => {
 	);
 	liveWatcher.start();
 	adsWatcher.start();
+	donateWatcher.start();
 });
 
 client.on("disconnected", (reason) => {
@@ -371,6 +381,7 @@ async function shutdownTwitch() {
 
 	liveWatcher.stop();
 	adsWatcher.stop();
+	donateWatcher.stop();
 
 	if (ircState() !== "OPEN") {
 		killSocket();
