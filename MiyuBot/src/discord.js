@@ -3144,6 +3144,11 @@ client.on(
                 newMember
             );
 
+            const oldNickname =
+                String(oldMember.nickname || "");
+            const newNickname =
+                String(newMember.nickname || "");
+
             /*
              * ==================================================
              * CHANGEMENT DE PSEUDO
@@ -3151,9 +3156,28 @@ client.on(
              */
 
             if (
-                oldMember.nickname !==
-                newMember.nickname
+                !oldMember.partial &&
+                oldNickname !==
+                newNickname
             ) {
+                const nicknameAudit =
+                    await findAuditEntry(
+                        newMember.guild,
+                        AuditLogEvent.MemberUpdate,
+                        newMember.id,
+                        8000
+                    );
+
+                if (
+                    !nicknameAudit ||
+                    (Array.isArray(nicknameAudit.changes) &&
+                        nicknameAudit.changes.length > 0 &&
+                        !nicknameAudit.changes.some(
+                            (change) => change.key === "nick"
+                        ))
+                ) {
+                    // Timeout / avatar / cache : pas un vrai changement de pseudo.
+                } else {
                 const nicknameUpdateKey =
                     `${newMember.guild.id}:${newMember.id}:nickname`;
 
@@ -3234,6 +3258,7 @@ client.on(
                         }
                     );
                 }
+                }
             }
 
             const oldRoleIds =
@@ -3277,9 +3302,19 @@ client.on(
                 );
 
             if (
-                addedRoleIds.length > 0 ||
-                removedRoleIds.length > 0
+                !oldMember.partial &&
+                (addedRoleIds.length > 0 ||
+                    removedRoleIds.length > 0)
             ) {
+                const roleAuditEntry =
+                    await findAuditEntry(
+                        newMember.guild,
+                        AuditLogEvent.MemberRoleUpdate,
+                        newMember.id,
+                        8000
+                    );
+
+                if (roleAuditEntry) {
                 const roleUpdateKey =
                     `${newMember.guild.id}:${newMember.id}:roles`;
 
@@ -3311,14 +3346,6 @@ client.on(
                         }
                     );
 
-                    const roleAuditEntry =
-                        await findAuditEntry(
-                            newMember.guild,
-                            AuditLogEvent.MemberRoleUpdate,
-                            newMember.id,
-                            10000
-                        );
-
                     const addedRoles =
                         addedRoleIds
                             .map(
@@ -3343,6 +3370,10 @@ client.on(
                                     `<@&${role.id}>`
                             );
 
+                    if (
+                        addedRoles.length > 0 ||
+                        removedRoles.length > 0
+                    ) {
                     await addMemberEvent(
                         newMember.guild.id,
                         newMember.id,
@@ -3390,6 +3421,8 @@ client.on(
                             ]
                         }
                     );
+                    }
+                }
                 }
             }
         } catch (error) {
