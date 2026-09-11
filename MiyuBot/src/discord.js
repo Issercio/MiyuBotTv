@@ -5535,7 +5535,11 @@ client.on("guildCreate", async (guild) => {
 const DISCORD_BIO_MAX_LENGTH = 400;
 
 const DEFAULT_DISCORD_BIO =
-    "Je veille sur le Discord et le tchat Twitch de Miyu. Anti-raid, anti-nuke, logs et commandes slash — pour que Kitsunara stream en paix. Tape /help.";
+    "🦊🌙 MiyuBot, gardienne du sanctuaire Kitsunara — communauté Discord & Twitch multigaming.\n\n" +
+    "Je protège le Discord de Miyu : anti-raid, anti-nuke, logs et commandes slash. " +
+    "Sur Twitch, je tiens le tchat — clips, lurk, shoutouts — " +
+    "pour que le multigaming, les dessins et la panique sur les jeux d’horreur se fassent en paix.\n\n" +
+    "Discord : /help  •  Twitch : !help  •  twitch.tv/miyu_yume";
 
 async function applyDiscordBio() {
     const rawBio =
