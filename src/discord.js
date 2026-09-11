@@ -5528,6 +5528,50 @@ client.on("guildCreate", async (guild) => {
 
 /*
  * ============================================================
+ * BIO DU BOT (À propos Discord)
+ * ============================================================
+ */
+
+const DISCORD_BIO_MAX_LENGTH = 400;
+
+const DEFAULT_DISCORD_BIO =
+    "Je veille sur le Discord et le tchat Twitch de Miyu. Anti-raid, anti-nuke, logs et commandes slash — pour que Kitsunara stream en paix. Tape /help.";
+
+async function applyDiscordBio() {
+    const rawBio =
+        process.env.DISCORD_BIO === undefined
+            ? DEFAULT_DISCORD_BIO
+            : String(process.env.DISCORD_BIO).trim();
+
+    if (!rawBio || rawBio === "off") {
+        return;
+    }
+
+    const bio = rawBio.slice(0, DISCORD_BIO_MAX_LENGTH);
+
+    try {
+        const application = await client.application.fetch();
+
+        if (application.description === bio) {
+            return;
+        }
+
+        await application.edit({
+            description: bio
+        });
+
+        console.log("📝 Bio Discord du bot mise à jour.");
+    } catch (error) {
+        console.error(
+            "❌ Impossible de mettre à jour la bio Discord :",
+            error
+        );
+    }
+}
+
+
+/*
+ * ============================================================
  * BOT PRÊT
  * ============================================================
  */
@@ -5599,6 +5643,8 @@ async function onDiscordReady() {
                 ],
                 status: "online"
             });
+
+            await applyDiscordBio();
 
             console.log(
                 `🤖 MiyuBot est connecté à Discord en tant que ${client.user.tag}`

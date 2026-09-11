@@ -102,6 +102,7 @@ Optionnel :
 
 | Variable | Rôle |
 |---|---|
+| `DISCORD_BIO` | texte « À propos » du profil du bot (400 car. max). `off` pour ne pas le modifier |
 | `TWITCH_DISCORD_INVITE` | lien envoyé par `!discord` (ton invitation, pas un exemple du dépôt) |
 | `TWITCH_SOCIALS_URL` | lien envoyé par `!socials` |
 | `TWITCH_DISCORD_LIVE_CHANNEL_ID` | salon Discord pour l’annonce live |
@@ -117,6 +118,7 @@ En tchat partagé, les commandes et liens des **autres** chaînes sont ignorés.
 
 ```text
 DISCORD_TOKEN=
+DISCORD_BIO=
 TWITCH_ENABLED=true
 TWITCH_USERNAME=
 TWITCH_OAUTH_TOKEN=
