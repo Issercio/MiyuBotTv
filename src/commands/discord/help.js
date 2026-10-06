@@ -54,7 +54,8 @@ module.exports = {
                 "`/securitylogs` — Salon de logs\n" +
                 "`/lockdown` `/unlock`\n" +
                 "`/antinuke` `/whitelist`\n" +
-                "`/cases` `/setupcheck` `/syncmembers`";
+                "`/cases` `/setupcheck` `/syncmembers`\n" +
+                "`/ticket` — Panneau tickets (panel, setup, close)";
         }
 
         return message.reply(text);

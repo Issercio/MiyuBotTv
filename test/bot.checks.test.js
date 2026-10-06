@@ -65,7 +65,7 @@ describe("slash definitions", () => {
     test("les commandes principales sont définies", () => {
         for (const name of [
             "ping", "help", "ban", "kick", "timeout", "mute",
-            "warn", "purge", "securitylogs", "config", "lockdown"
+            "warn", "purge", "securitylogs", "config", "lockdown", "ticket"
         ]) {
             assert.match(text, new RegExp(`\\b${name}:`), name);
         }

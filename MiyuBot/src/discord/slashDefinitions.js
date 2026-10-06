@@ -162,5 +162,23 @@ module.exports = {
             userOpt("membre", "Membre", false),
             intOpt("nombre", "Nombre de dossiers", false, 1, 25)
         ]
+    },
+    ticket: {
+        description: "Tickets support (panneau, rôle staff, fermeture)",
+        options: [
+            strOpt("action", "panel, setup ou close", false),
+            {
+                name: "salon",
+                description: "Catégorie où créer les tickets",
+                type: CHANNEL,
+                required: false
+            },
+            {
+                name: "role",
+                description: "Rôle staff qui voit les tickets",
+                type: ApplicationCommandOptionType.Role,
+                required: false
+            }
+        ]
     }
 };

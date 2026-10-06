@@ -461,11 +461,11 @@ async function initializeDatabase() {
 
                 anti_spam_enabled INTEGER DEFAULT 1,
 
-                anti_spam_threshold INTEGER DEFAULT 6,
+                anti_spam_threshold INTEGER DEFAULT 12,
 
                 anti_spam_window INTEGER DEFAULT 8,
 
-                anti_spam_sanction TEXT DEFAULT 'ban',
+                anti_spam_sanction TEXT DEFAULT 'timeout',
 
                 anti_bot_enabled INTEGER DEFAULT 1,
 
@@ -817,6 +817,66 @@ async function initializeDatabase() {
             "lockdown_permissions",
             "had_overwrite",
             "INTEGER DEFAULT 0"
+        );
+
+
+        await addColumnIfMissing(
+            "guild_settings",
+            "ticket_category_id",
+            "TEXT"
+        );
+
+
+        await addColumnIfMissing(
+            "guild_settings",
+            "ticket_staff_role_id",
+            "TEXT"
+        );
+
+
+        await addColumnIfMissing(
+            "guild_settings",
+            "ticket_panel_channel_id",
+            "TEXT"
+        );
+
+
+        await run(
+            `
+            CREATE TABLE IF NOT EXISTS tickets (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                guild_id TEXT NOT NULL,
+
+                channel_id TEXT NOT NULL,
+
+                user_id TEXT NOT NULL,
+
+                opened_at INTEGER NOT NULL,
+
+                closed_at INTEGER,
+
+                closed_by TEXT,
+
+                status TEXT NOT NULL DEFAULT 'open'
+
+            )
+            `
+        );
+
+
+        await run(
+            `
+            CREATE INDEX IF NOT EXISTS
+            idx_tickets_open
+
+            ON tickets (
+                guild_id,
+                user_id,
+                status
+            )
+            `
         );
 
 

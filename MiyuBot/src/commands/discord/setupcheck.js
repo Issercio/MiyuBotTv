@@ -111,8 +111,8 @@ module.exports = {
                 warnings.push("- Seuil anti-raid faible (<5): risque de faux positifs.");
             }
 
-            if (Number(settings.anti_spam_threshold || 6) < 4) {
-                warnings.push("- Seuil anti-spam tres agressif (<4).");
+            if (Number(settings.anti_spam_threshold || 12) < 8) {
+                warnings.push("- Seuil anti-spam tres agressif (<8).");
             }
 
             if (Number(settings.quarantine_enabled || 0) === 1 && !settings.quarantine_role_id) {

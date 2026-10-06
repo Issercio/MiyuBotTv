@@ -53,6 +53,11 @@ const {
     registerGuildSlashCommands
 } = require("./discord/slashRegister");
 
+const {
+    handleTicketButton,
+    isTicketButton
+} = require("./discord/tickets");
+
 const slashDefinitions = require("./discord/slashDefinitions");
 
 
@@ -172,7 +177,7 @@ const recentVoiceLogKeys = new Map();
 const antiNukeActionWindows = new Map();
 const antiSpamMessageWindows = new Map();
 const antiSpamStrikeLevels = new Map();
-const ANTI_SPAM_STRIKE_RESET_MS = 60 * 60 * 1000;
+const ANTI_SPAM_STRIKE_RESET_MS = 15 * 60 * 1000;
 const inviteUsageCache = new Map();
 const recentInviteCreateLogs = new Map();
 const inviteCreateLogsInFlight = new Set();
@@ -194,9 +199,9 @@ const DEFAULT_GUILD_SETTINGS = {
     lockdown_active: 0,
     min_account_age_days: 30,
     anti_spam_enabled: 1,
-    anti_spam_threshold: 6,
+    anti_spam_threshold: 12,
     anti_spam_window: 8,
-    anti_spam_sanction: "ban",
+    anti_spam_sanction: "timeout",
     anti_bot_enabled: 1,
     anti_nuke_enabled: 1,
     anti_nuke_threshold: 3,
@@ -1777,7 +1782,7 @@ function detectSpamReasons(
 
     if (
         maxDuplicateCount >=
-        Math.max(3, threshold - 2)
+        Math.max(6, threshold - 4)
     ) {
         reasons.push(
             `messages répétés (${maxDuplicateCount})`
@@ -1794,7 +1799,7 @@ function detectSpamReasons(
         );
     }
 
-    if (mentionCount >= 5) {
+    if (mentionCount >= 8) {
         reasons.push(
             `mention spam (${mentionCount} mentions)`
         );
@@ -1805,7 +1810,7 @@ function detectSpamReasons(
             (eventData) => eventData.hasLink
         ).length;
 
-    if (linkCount >= 4) {
+    if (linkCount >= 6) {
         reasons.push(
             `link spam (${linkCount} liens)`
         );
@@ -1815,8 +1820,8 @@ function detectSpamReasons(
         message.content || "";
 
     if (
-        content.length >= 20 &&
-        upperCaseRatio(content) >= 0.75
+        content.length >= 40 &&
+        upperCaseRatio(content) >= 0.9
     ) {
         reasons.push(
             "caps abuse"
@@ -1831,18 +1836,14 @@ function antiSpamSanctionCap(
     configuredSanction
 ) {
     const normalized =
-        String(configuredSanction || "ban")
+        String(configuredSanction || "timeout")
             .toLowerCase();
 
-    if (normalized === "timeout") {
-        return 2;
-    }
-
-    if (normalized === "kick") {
+    if (normalized === "kick" || normalized === "ban") {
         return 3;
     }
 
-    return 4;
+    return 3;
 }
 
 
@@ -1861,27 +1862,26 @@ function buildSpamAction(
     if (level <= 1) {
         return {
             type: "warn",
-            label: "Avertissement"
+            label: "Rappel",
+            deleteMessage: false,
+            durationMs: 0
         };
     }
 
     if (level === 2) {
         return {
             type: "timeout",
-            label: "Timeout 10 minutes"
-        };
-    }
-
-    if (level === 3) {
-        return {
-            type: "kick",
-            label: "Kick"
+            label: "Timeout 1 minute",
+            deleteMessage: true,
+            durationMs: 60 * 1000
         };
     }
 
     return {
-        type: "ban",
-        label: "Ban"
+        type: "timeout",
+        label: "Timeout 5 minutes",
+        deleteMessage: true,
+        durationMs: 5 * 60 * 1000
     };
 }
 
@@ -1928,38 +1928,22 @@ async function applySpamAction(
         }
 
         await member.timeout(
-            10 * 60 * 1000,
+            action.durationMs || 60 * 1000,
             reason
         );
 
         return {
             success: true,
             details:
-                "Timeout 10 minutes appliqué."
+                action.label ||
+                "Timeout appliqué."
         };
     }
-
-    if (action.type === "kick") {
-        await member.kick(reason);
-
-        return {
-            success: true,
-            details:
-                "Kick appliqué."
-        };
-    }
-
-    await message.guild.members.ban(
-        member.id,
-        {
-            reason
-        }
-    );
 
     return {
         success: true,
         details:
-            "Ban appliqué."
+            "Rappel envoyé."
     };
 }
 
@@ -2000,8 +1984,8 @@ async function checkAntiSpam(message) {
 
     const threshold =
         Math.max(
-            3,
-            Number(settings.anti_spam_threshold) || 6
+            10,
+            Number(settings.anti_spam_threshold) || 12
         );
 
     const windowSeconds =
@@ -2077,7 +2061,7 @@ async function checkAntiSpam(message) {
             settings.anti_spam_sanction
         );
 
-    if (message.deletable) {
+    if (action.deleteMessage !== false && message.deletable) {
         await message.delete().catch(
             () => null
         );
@@ -2198,7 +2182,7 @@ async function checkAntiSpam(message) {
 
     if (action.type === "warn") {
         await message.channel.send(
-            `⚠️ <@${message.author.id}> merci d'arrêter le spam.`
+            `🦊 <@${message.author.id}> doucement — ralentis un peu le tchat.`
         ).catch(
             () => null
         );
@@ -5504,11 +5488,16 @@ async function runSlashCommand(interaction) {
 
 
 client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isChatInputCommand()) {
-        return;
-    }
-
     try {
+        if (isTicketButton(interaction)) {
+            await handleTicketButton(interaction);
+            return;
+        }
+
+        if (!interaction.isChatInputCommand()) {
+            return;
+        }
+
         await runSlashCommand(interaction);
     } catch (error) {
         console.error("❌ Erreur interactionCreate :", error);

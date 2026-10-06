@@ -154,7 +154,8 @@ Tape `/` dans Discord.
 | `/ban` `/kick` `/timeout` `/warn` | Modération |
 | `/lockdown` `/unlock` | Lock serveur |
 | `/whitelist` `/antinuke` | Anti-nuke |
-| `/cases` | Dossiers de sanction |
+| `/ticket panel` | Crée **#ouvrir-ticket** + bouton |
+| `/ticket setup` | Catégorie + rôle staff |
 
 Autres : `/unban` `/softban` `/untimeout` `/warnings` `/nick` `/purge` `/slowmode` `/syncmembers`
 
