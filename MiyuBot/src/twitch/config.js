@@ -97,8 +97,8 @@ function loadTwitchConfig() {
 			spamThreshold: envNumber("TWITCH_SPAM_THRESHOLD", 10),
 			spamWindowMs: envNumber("TWITCH_SPAM_WINDOW_MS", 8000),
 			repeatThreshold: envNumber("TWITCH_REPEAT_THRESHOLD", 5),
-			capsMinLength: envNumber("TWITCH_CAPS_MIN_LENGTH", 20),
-			capsRatio: Number(process.env.TWITCH_CAPS_RATIO || 0.9),
+			capsMinLength: envNumber("TWITCH_CAPS_MIN_LENGTH", 40),
+			capsRatio: Number(process.env.TWITCH_CAPS_RATIO || 0.95),
 			linkTimeoutSeconds: envNumber("TWITCH_LINK_TIMEOUT", 1),
 			spamTimeoutSeconds: envNumber("TWITCH_SPAM_TIMEOUT", 10),
 			capsTimeoutSeconds: envNumber("TWITCH_CAPS_TIMEOUT", 3)

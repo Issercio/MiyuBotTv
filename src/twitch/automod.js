@@ -20,6 +20,10 @@ function createAutomod(config, client, queue) {
 	const windows = new Map();
 	const repeats = new Map();
 	const permits = new Map();
+	const capsOffenses = new Map();
+
+	const CAPS_STRIKE_WINDOW_MS = 3 * 60 * 1000;
+	const CAPS_ANNOUNCE_COOLDOWN_MS = 8 * 60 * 1000;
 
 	function permit(username, seconds = 60) {
 		const key = String(username || "").toLowerCase().replace(/^@/, "");
@@ -43,18 +47,21 @@ function createAutomod(config, client, queue) {
 		return true;
 	}
 
-	function countCapsRatio(text) {
+	function countCapsInfo(text) {
 		const letters = text.replace(/[^a-zA-ZÀ-ÿ]/g, "");
 
 		if (!letters.length) {
-			return 0;
+			return { ratio: 0, letterCount: 0 };
 		}
 
 		const caps = letters.replace(/[^A-ZÀ-Ÿ]/g, "").length;
-		return caps / letters.length;
+		return {
+			ratio: caps / letters.length,
+			letterCount: letters.length
+		};
 	}
 
-	async function punish(channel, tags, seconds, reason) {
+	async function punish(channel, tags, seconds, reason, announce = true) {
 		const username = tags.username;
 
 		try {
@@ -72,6 +79,10 @@ function createAutomod(config, client, queue) {
 				"[TWITCH] Timeout automod impossible :",
 				error.message || error
 			);
+		}
+
+		if (!announce) {
+			return;
 		}
 
 		await queue.say(
@@ -152,17 +163,50 @@ function createAutomod(config, client, queue) {
 			});
 		}
 
+		const caps = countCapsInfo(text);
+		const capsMinLength = Math.max(
+			Number(config.automod.capsMinLength) || 40,
+			32
+		);
+		const capsRatio = Math.max(
+			Number(config.automod.capsRatio) || 0.95,
+			0.92
+		);
+
 		if (
-			text.length >= config.automod.capsMinLength &&
-			countCapsRatio(text) >= config.automod.capsRatio
+			text.length >= capsMinLength &&
+			caps.letterCount >= 24 &&
+			caps.ratio >= capsRatio
 		) {
-			await punish(
-				channel,
-				tags,
-				config.automod.capsTimeoutSeconds,
-				"baisse les caps."
-			);
-			return true;
+			const rec = capsOffenses.get(username) || {
+				count: 0,
+				lastAt: 0,
+				lastAnnounce: 0
+			};
+
+			if (now - rec.lastAt > CAPS_STRIKE_WINDOW_MS) {
+				rec.count = 0;
+			}
+
+			rec.count += 1;
+			rec.lastAt = now;
+			capsOffenses.set(username, rec);
+
+			if (rec.count < 2) {
+				return false;
+			}
+
+			rec.count = 0;
+
+			if (now - rec.lastAnnounce >= CAPS_ANNOUNCE_COOLDOWN_MS) {
+				rec.lastAnnounce = now;
+				await queue.say(
+					channel,
+					`@${tags["display-name"] || username} doucement avec les majuscules.`
+				);
+			}
+
+			return false;
 		}
 
 		if (LINK_REGEX.test(text) && !ALLOWED_LINK_REGEX.test(text) && !hasPermit(username)) {
