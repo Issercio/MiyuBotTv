@@ -30,7 +30,11 @@ module.exports = {
 
         const action = String(args[0] || "").toLowerCase();
 
-        if (!action || action === "help") {
+        if (!action || action === "panel") {
+            return message.reply(await postTicketPanel(message.guild));
+        }
+
+        if (action === "help") {
             const embed = new EmbedBuilder()
                 .setColor(0x5865F2)
                 .setTitle("🎫 Tickets MiyuBot")
@@ -59,10 +63,6 @@ module.exports = {
                 });
 
             return message.reply({ embeds: [embed] });
-        }
-
-        if (action === "panel") {
-            return message.reply(await postTicketPanel(message.guild));
         }
 
         if (action === "setup") {

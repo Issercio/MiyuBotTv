@@ -19,9 +19,15 @@ function addOption(builder, option) {
     }
 
     if (option.type === ApplicationCommandOptionType.String) {
-        builder.addStringOption((item) =>
-            item.setName(name).setDescription(description).setRequired(required)
-        );
+        builder.addStringOption((item) => {
+            item.setName(name).setDescription(description).setRequired(required);
+
+            if (Array.isArray(option.choices) && option.choices.length) {
+                item.addChoices(...option.choices);
+            }
+
+            return item;
+        });
         return;
     }
 
@@ -43,9 +49,15 @@ function addOption(builder, option) {
     }
 
     if (option.type === ApplicationCommandOptionType.Channel) {
-        builder.addChannelOption((item) =>
-            item.setName(name).setDescription(description).setRequired(required)
-        );
+        builder.addChannelOption((item) => {
+            item.setName(name).setDescription(description).setRequired(required);
+
+            if (Array.isArray(option.channelTypes) && option.channelTypes.length) {
+                item.addChannelTypes(...option.channelTypes);
+            }
+
+            return item;
+        });
         return;
     }
 

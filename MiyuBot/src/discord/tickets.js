@@ -453,9 +453,7 @@ async function saveTicketSetup(guild, category, staffRole) {
 
     if (category) {
         if (category.type !== ChannelType.GuildCategory) {
-            return {
-                content: "❌ Choisis une **catégorie** (pas un salon texte)."
-            };
+            category = null;
         }
 
         await run(

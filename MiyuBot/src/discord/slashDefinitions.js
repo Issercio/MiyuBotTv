@@ -1,5 +1,6 @@
 const {
-    ApplicationCommandOptionType
+    ApplicationCommandOptionType,
+    ChannelType
 } = require("discord.js");
 
 const USER = ApplicationCommandOptionType.User;
@@ -164,14 +165,34 @@ module.exports = {
         ]
     },
     ticket: {
-        description: "Tickets support (panneau, rôle staff, fermeture)",
+        description: "Crée #ouvrir-ticket, ou règle le rôle staff",
         options: [
-            strOpt("action", "panel, setup ou close", false),
+            {
+                name: "action",
+                description: "Laisse vide ou mets panel pour créer le salon",
+                type: STRING,
+                required: false,
+                choices: [
+                    {
+                        name: "panel — créer #ouvrir-ticket",
+                        value: "panel"
+                    },
+                    {
+                        name: "setup — rôle staff",
+                        value: "setup"
+                    },
+                    {
+                        name: "close — fermer ce ticket",
+                        value: "close"
+                    }
+                ]
+            },
             {
                 name: "salon",
-                description: "Catégorie où créer les tickets",
+                description: "Catégorie (optionnel, le bot peut la créer)",
                 type: CHANNEL,
-                required: false
+                required: false,
+                channelTypes: [ChannelType.GuildCategory]
             },
             {
                 name: "role",
