@@ -10,11 +10,15 @@ const {
 const {
     run,
     get,
+    all,
     databaseReady
 } = require("../database/database");
 
 const OPEN_BUTTON_ID = "miyu_ticket_open";
 const CLOSE_BUTTON_ID = "miyu_ticket_close";
+const MAX_OPEN_TICKETS = 50;
+const DISCORD_CATEGORY_LIMIT = 50;
+const TICKET_EMBED_COLOR = 0xc47aff;
 
 async function ensureGuildSettings(guildId) {
     await databaseReady;
@@ -187,7 +191,7 @@ async function ensureTicketPanelChannel(guild, settings) {
         name: PANEL_CHANNEL_NAME,
         type: ChannelType.GuildText,
         parent: category.id,
-        topic: "Clique sur le bouton pour ouvrir un ticket.",
+        topic: "Ouvre un ticket pour parler au staff en privé.",
         permissionOverwrites: [
             {
                 id: guild.id,
@@ -218,24 +222,103 @@ async function postTicketPanel(guild) {
     return {
         content:
             `🎫 Salon créé (ou réutilisé) : ${panelChannel}\n` +
-            "Les membres cliquent sur **Ouvrir un ticket** là-bas. " +
-            "Leurs tickets privés apparaîtront dans la même catégorie."
+            "Les membres cliquent sur **Ouvrir un ticket**."
     };
 }
 
-async function findOpenTicket(guildId, userId) {
-    return get(
+async function sweepAndCountOpenTickets(guild) {
+    const rows = await all(
         `
         SELECT *
         FROM tickets
         WHERE guild_id = ?
-        AND user_id = ?
         AND status = 'open'
-        ORDER BY opened_at DESC
-        LIMIT 1
         `,
-        [guildId, userId]
+        [guild.id]
     );
+
+    let live = 0;
+
+    for (const row of rows) {
+        if (guild.channels.cache.get(row.channel_id)) {
+            live += 1;
+            continue;
+        }
+
+        await run(
+            `
+            UPDATE tickets
+            SET
+                status = 'closed',
+                closed_at = ?,
+                closed_by = ?
+            WHERE id = ?
+            `,
+            [Date.now(), "stale", row.id]
+        );
+    }
+
+    return live;
+}
+
+function categoryHasRoom(category) {
+    return Boolean(
+        category &&
+        category.children.cache.size < DISCORD_CATEGORY_LIMIT
+    );
+}
+
+async function findTicketCategoryWithRoom(guild, settings) {
+    const primary = await ensureTicketCategory(guild, settings);
+
+    if (categoryHasRoom(primary)) {
+        return primary;
+    }
+
+    const overflow = guild.channels.cache.filter(
+        (channel) =>
+            channel.type === ChannelType.GuildCategory &&
+            channel.id !== primary.id &&
+            /^Tickets(?: \d+)?$/i.test(channel.name)
+    );
+
+    for (const category of overflow.values()) {
+        if (categoryHasRoom(category)) {
+            return category;
+        }
+    }
+
+    return guild.channels.create({
+        name: `Tickets ${overflow.size + 2}`,
+        type: ChannelType.GuildCategory,
+        reason: "MiyuBot tickets"
+    });
+}
+
+function uniqueTicketChannelName(guild, user) {
+    const base = ticketChannelName(user);
+
+    if (
+        !guild.channels.cache.some(
+            (channel) => channel.name === base
+        )
+    ) {
+        return base;
+    }
+
+    for (let index = 2; index < 50; index += 1) {
+        const name = `${base}-${index}`.slice(0, 95);
+
+        if (
+            !guild.channels.cache.some(
+                (channel) => channel.name === name
+            )
+        ) {
+            return name;
+        }
+    }
+
+    return `${base}-${Date.now().toString(36).slice(-4)}`;
 }
 
 async function findTicketByChannel(channelId) {
@@ -253,31 +336,16 @@ async function findTicketByChannel(channelId) {
 
 async function openTicket(guild, user, member) {
     const settings = await ensureGuildSettings(guild.id);
-    const existing = await findOpenTicket(guild.id, user.id);
+    const openCount = await sweepAndCountOpenTickets(guild);
 
-    if (existing) {
-        const openChannel = guild.channels.cache.get(existing.channel_id);
-
-        if (openChannel) {
-            return {
-                content: `Tu as déjà un ticket ouvert : ${openChannel}`
-            };
-        }
-
-        await run(
-            `
-            UPDATE tickets
-            SET
-                status = 'closed',
-                closed_at = ?,
-                closed_by = ?
-            WHERE id = ?
-            `,
-            [Date.now(), "stale", existing.id]
-        );
+    if (openCount >= MAX_OPEN_TICKETS) {
+        return {
+            content:
+                "Impossible d’ouvrir un ticket pour le moment. Réessaie un peu plus tard."
+        };
     }
 
-    const category = await ensureTicketCategory(guild, settings);
+    const category = await findTicketCategoryWithRoom(guild, settings);
     const staffRoleId = settings.ticket_staff_role_id || null;
     const overwrites = [
         {
@@ -322,7 +390,7 @@ async function openTicket(guild, user, member) {
     }
 
     const channel = await guild.channels.create({
-        name: ticketChannelName(user),
+        name: uniqueTicketChannelName(guild, user),
         type: ChannelType.GuildText,
         parent: category.id,
         permissionOverwrites: overwrites,
@@ -352,10 +420,11 @@ async function openTicket(guild, user, member) {
         content: pingLine,
         embeds: [
             new EmbedBuilder()
-                .setColor(0x5865F2)
-                .setTitle("🎫 Ticket Kitsunara")
+                .setColor(TICKET_EMBED_COLOR)
+                .setTitle("🎫 Ticket ouvert")
                 .setDescription(
-                    "Explique ton souci ici. Un membre du staff va te répondre.\n" +
+                    "Explique clairement ton problème ou ta demande.\n" +
+                    "Un membre du staff te répondra ici, en privé.\n\n" +
                     "Quand c’est réglé, clique sur **Fermer le ticket**."
                 )
                 .addFields({
@@ -364,7 +433,7 @@ async function openTicket(guild, user, member) {
                     inline: false
                 })
                 .setFooter({
-                    text: "MiyuBot • Tickets"
+                    text: "MiyuBot • Tickets Kitsunara"
                 })
                 .setTimestamp()
         ],
@@ -434,14 +503,15 @@ function panelPayload() {
     return {
         embeds: [
             new EmbedBuilder()
-                .setColor(0x5865F2)
+                .setColor(TICKET_EMBED_COLOR)
                 .setTitle("🎫 Tickets Kitsunara")
                 .setDescription(
-                    "Besoin du staff ? Clique sur le bouton pour ouvrir un **salon privé**.\n" +
-                    "Seul toi et l’équipe pourrez le voir."
+                    "Besoin du staff ? Clique sur **Ouvrir un ticket**.\n\n" +
+                    "Un salon **privé** sera créé : toi + l’équipe, personne d’autre.\n" +
+                    "Idéal pour un souci, une question, un signalement ou une collab."
                 )
                 .setFooter({
-                    text: "MiyuBot • Un ticket ouvert à la fois"
+                    text: "MiyuBot • Support Kitsunara"
                 })
         ],
         components: [openButtonRow()]
@@ -451,11 +521,7 @@ function panelPayload() {
 async function saveTicketSetup(guild, category, staffRole) {
     await ensureGuildSettings(guild.id);
 
-    if (category) {
-        if (category.type !== ChannelType.GuildCategory) {
-            category = null;
-        }
-
+    if (category && category.type === ChannelType.GuildCategory) {
         await run(
             `
             UPDATE guild_settings
