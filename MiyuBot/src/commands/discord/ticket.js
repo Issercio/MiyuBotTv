@@ -5,7 +5,9 @@ const {
 
 const {
     closeTicket,
+    listClosedTickets,
     postTicketPanel,
+    reopenTicket,
     saveTicketSetup
 } = require("../../discord/tickets");
 
@@ -39,7 +41,7 @@ module.exports = {
                 .setColor(0x5865F2)
                 .setTitle("🎫 Tickets MiyuBot")
                 .setDescription(
-                    "Panneau avec bouton, salon privé, fermeture par le staff ou la personne qui a ouvert."
+                    "Panneau Support / Collab / Signalement, prise en charge staff, fermeture avec sauvegarde."
                 )
                 .addFields(
                     {
@@ -49,12 +51,15 @@ module.exports = {
                     },
                     {
                         name: "2. Salon du bouton",
-                        value: "`/ticket panel` crée **#ouvrir-ticket** tout seul, avec le bouton",
+                        value: "`/ticket panel` crée **#ouvrir-ticket** avec Support / Collab / Signalement",
                         inline: false
                     },
                     {
-                        name: "3. Fermer",
-                        value: "Bouton **Fermer le ticket**, ou `/ticket close` dans le salon",
+                        name: "3. Fermer / rouvrir",
+                        value:
+                            "Staff : **Je m'en occupe**.\n" +
+                            "**Fermer** sauvegarde + copie dans les logs.\n" +
+                            "`/ticket list` puis `/ticket reopen` + **numero**",
                         inline: false
                     }
                 )
@@ -102,8 +107,27 @@ module.exports = {
             );
         }
 
+        if (action === "list") {
+            return message.reply(await listClosedTickets(message.guild));
+        }
+
+        if (action === "reopen") {
+            const ticketId = args
+                .slice(1)
+                .map((value) => Number(value))
+                .find((value) => Number.isInteger(value) && value > 0);
+
+            return message.reply(
+                await reopenTicket(
+                    message.guild,
+                    message.member,
+                    ticketId
+                )
+            );
+        }
+
         return message.reply(
-            "❌ Actions : `panel`, `setup`, `close`."
+            "❌ Actions : `panel`, `setup`, `close`, `list`, `reopen`."
         );
     }
 };

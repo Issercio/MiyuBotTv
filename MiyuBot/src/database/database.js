@@ -859,7 +859,13 @@ async function initializeDatabase() {
 
                 closed_by TEXT,
 
-                status TEXT NOT NULL DEFAULT 'open'
+                status TEXT NOT NULL DEFAULT 'open',
+
+                transcript TEXT,
+
+                ticket_type TEXT,
+
+                claimed_by TEXT
 
             )
             `
@@ -877,6 +883,27 @@ async function initializeDatabase() {
                 status
             )
             `
+        );
+
+
+        await addColumnIfMissing(
+            "tickets",
+            "transcript",
+            "TEXT"
+        );
+
+
+        await addColumnIfMissing(
+            "tickets",
+            "ticket_type",
+            "TEXT"
+        );
+
+
+        await addColumnIfMissing(
+            "tickets",
+            "claimed_by",
+            "TEXT"
         );
 
 

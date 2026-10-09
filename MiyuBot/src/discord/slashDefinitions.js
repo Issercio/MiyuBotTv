@@ -165,7 +165,7 @@ module.exports = {
         ]
     },
     ticket: {
-        description: "Crée #ouvrir-ticket, ou règle le rôle staff",
+        description: "Panneau tickets (Support / Collab / Signalement)",
         options: [
             {
                 name: "action",
@@ -184,8 +184,24 @@ module.exports = {
                     {
                         name: "close — fermer ce ticket",
                         value: "close"
+                    },
+                    {
+                        name: "list — tickets sauvegardés",
+                        value: "list"
+                    },
+                    {
+                        name: "reopen — rouvrir un ticket",
+                        value: "reopen"
                     }
                 ]
+            },
+            {
+                name: "numero",
+                description: "Numéro du ticket (pour reopen)",
+                type: INTEGER,
+                required: false,
+                minValue: 1,
+                maxValue: 999999
             },
             {
                 name: "salon",

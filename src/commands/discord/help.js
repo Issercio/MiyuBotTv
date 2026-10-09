@@ -55,7 +55,7 @@ module.exports = {
                 "`/lockdown` `/unlock`\n" +
                 "`/antinuke` `/whitelist`\n" +
                 "`/cases` `/setupcheck` `/syncmembers`\n" +
-                "`/ticket` — Panneau tickets (panel, setup, close)";
+                "`/ticket` — Panneau, list, reopen";
         }
 
         return message.reply(text);
