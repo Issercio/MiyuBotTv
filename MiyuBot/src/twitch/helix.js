@@ -387,8 +387,49 @@ function createHelix(config) {
 		return adsUserToken();
 	}
 
-	async function waitForClipUrl(clipId) {
-		return `https://clips.twitch.tv/${clipId}`;
+	function clipPageUrl(clipId) {
+		const id = String(clipId || "")
+			.split("?")[0]
+			.split("/")
+			.filter(Boolean)
+			.pop();
+
+		if (!id || !config.channel) {
+			return id ? `https://clips.twitch.tv/${id}` : "";
+		}
+
+		return `https://www.twitch.tv/${config.channel}/clip/${id}`;
+	}
+
+	function sleep(ms) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	async function getClipById(clipId) {
+		if (!clipId) {
+			return null;
+		}
+
+		const data = await helixData(
+			`/helix/clips?id=${encodeURIComponent(clipId)}`
+		);
+
+		return data && Array.isArray(data.data) ? data.data[0] || null : null;
+	}
+
+	async function waitForReadyClip(clipId) {
+		let clip = null;
+
+		for (let attempt = 0; attempt < 12; attempt += 1) {
+			await sleep(2000);
+			clip = await getClipById(clipId);
+
+			if (clip?.thumbnail_url) {
+				return clip;
+			}
+		}
+
+		return clip;
 	}
 
 	async function getClips({ startedAt, first = 20 } = {}) {
@@ -488,10 +529,16 @@ function createHelix(config) {
 				};
 			}
 
+			const ready = await waitForReadyClip(created.id);
+
 			return {
 				ok: true,
 				id: created.id,
-				url: await waitForClipUrl(created.id)
+				url: clipPageUrl(created.id),
+				title: ready?.title || "Clip du live",
+				thumbnail_url: ready?.thumbnail_url || "",
+				creator_name: ready?.creator_name || "",
+				broadcaster_name: ready?.broadcaster_name || config.channel
 			};
 		} catch (error) {
 			console.warn("[TWITCH] Clip erreur :", error.message || error);

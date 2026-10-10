@@ -49,7 +49,11 @@ function createClipWatcher({
 		try {
 			const posted = await postClip(
 				discord,
-				clip,
+				{
+					...clip,
+					channel: config.channel,
+					url: undefined
+				},
 				config.discordClipsChannelId
 			);
 
@@ -97,7 +101,11 @@ function createClipWatcher({
 			}
 
 			const fresh = clips
-				.filter((clip) => clip?.id && !seen.has(String(clip.id)))
+				.filter((clip) =>
+					clip?.id &&
+					clip.thumbnail_url &&
+					!seen.has(String(clip.id))
+				)
 				.sort(
 					(left, right) =>
 						new Date(left.created_at || 0) - new Date(right.created_at || 0)

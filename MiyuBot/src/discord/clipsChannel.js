@@ -151,20 +151,47 @@ async function findClipsChannel(discord, preferredId) {
     return null;
 }
 
+function discordClipUrl(clip) {
+    const raw = String(clip.id || clip.url || "");
+    const id = raw
+        .replace(
+            /^https?:\/\/(?:www\.)?(?:clips\.twitch\.tv|twitch\.tv\/[^/]+\/clip)\//i,
+            ""
+        )
+        .split("?")[0]
+        .split("/")
+        .filter(Boolean)
+        .pop();
+
+    const login = String(
+        clip.channel ||
+        clip.broadcaster_login ||
+        clip.broadcaster_name ||
+        ""
+    )
+        .replace(/^#/, "")
+        .toLowerCase();
+
+    if (!id) {
+        return "";
+    }
+
+    if (!login) {
+        return `https://www.twitch.tv/${id}`;
+    }
+
+    return `https://www.twitch.tv/${login}/clip/${id}`;
+}
+
 async function postClip(discord, clip, preferredId) {
     const channel = await findClipsChannel(discord, preferredId);
+    const url = discordClipUrl(clip);
 
-    if (!channel) {
+    if (!channel || !url) {
         return false;
     }
 
-    const creator = clip.creator_name || "Quelqu'un";
-    const title = clip.title || "Clip du live";
-    const url = clip.url || `https://clips.twitch.tv/${clip.id}`;
-
-    await channel.send(
-        `🎬 **${creator}** · ${title}\n${url}`
-    );
+    await channel.send(url);
 
     return true;
 }

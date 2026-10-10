@@ -277,9 +277,13 @@ function createCommandRouter({
 			if (clipWatcher && typeof clipWatcher.notifyCreated === "function") {
 				clipWatcher.notifyCreated({
 					id: clip.id,
-					url: clip.url,
-					title: "Clip du live",
-					creator_name: tags["display-name"] || tags.username
+					title: clip.title,
+					thumbnail_url: clip.thumbnail_url,
+					creator_name:
+						clip.creator_name ||
+						tags["display-name"] ||
+						tags.username,
+					broadcaster_name: clip.broadcaster_name
 				}).catch(() => null);
 			}
 
