@@ -72,7 +72,8 @@ function createCommandRouter({
 	client,
 	queue,
 	helix,
-	automod
+	automod,
+	clipWatcher
 }) {
 	const globalCooldown = new Map();
 	const userCooldown = new Map();
@@ -272,6 +273,16 @@ function createCommandRouter({
 				tags,
 				`🦊🎬 Miyu a figé cet instant ! Clip → ${clip.url}`
 			);
+
+			if (clipWatcher && typeof clipWatcher.notifyCreated === "function") {
+				clipWatcher.notifyCreated({
+					id: clip.id,
+					url: clip.url,
+					title: "Clip du live",
+					creator_name: tags["display-name"] || tags.username
+				}).catch(() => null);
+			}
+
 			return;
 		}
 

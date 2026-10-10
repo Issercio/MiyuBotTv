@@ -164,6 +164,21 @@ module.exports = {
             intOpt("nombre", "Nombre de dossiers", false, 1, 25)
         ]
     },
+    clips: {
+        description: "Crée #clips pour poster les clips Twitch",
+        options: [
+            {
+                name: "salon",
+                description: "Salon existant (sinon MiyuBot crée #clips)",
+                type: CHANNEL,
+                required: false,
+                channelTypes: [
+                    ChannelType.GuildText,
+                    ChannelType.GuildAnnouncement
+                ]
+            }
+        ]
+    },
     ticket: {
         description: "Panneau tickets (Support / Collab / Signalement)",
         options: [

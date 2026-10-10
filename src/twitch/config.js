@@ -71,6 +71,8 @@ function loadTwitchConfig() {
 		clientId: envText("TWITCH_CLIENT_ID"),
 		clientSecret: envText("TWITCH_CLIENT_SECRET"),
 		discordLiveChannelId: envText("TWITCH_DISCORD_LIVE_CHANNEL_ID"),
+		discordClipsChannelId: envText("TWITCH_DISCORD_CLIPS_CHANNEL_ID"),
+		clipsPollMs: envNumber("TWITCH_CLIPS_POLL_MS", 60000),
 		discordInvite: envText("TWITCH_DISCORD_INVITE"),
 		twitter: envText("TWITCH_TWITTER"),
 		youtube: envText("TWITCH_YOUTUBE"),

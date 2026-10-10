@@ -841,6 +841,13 @@ async function initializeDatabase() {
         );
 
 
+        await addColumnIfMissing(
+            "guild_settings",
+            "clips_channel_id",
+            "TEXT"
+        );
+
+
         await run(
             `
             CREATE TABLE IF NOT EXISTS tickets (

@@ -391,6 +391,34 @@ function createHelix(config) {
 		return `https://clips.twitch.tv/${clipId}`;
 	}
 
+	async function getClips({ startedAt, first = 20 } = {}) {
+		try {
+			const user = await getUser(config.channel);
+
+			if (!user?.id) {
+				return [];
+			}
+
+			const params = [
+				`broadcaster_id=${encodeURIComponent(user.id)}`,
+				`first=${Math.min(100, Math.max(1, Number(first) || 20))}`
+			];
+
+			if (startedAt) {
+				params.push(
+					`started_at=${encodeURIComponent(new Date(startedAt).toISOString())}`
+				);
+			}
+
+			const data = await helixData(`/helix/clips?${params.join("&")}`);
+
+			return data && Array.isArray(data.data) ? data.data : [];
+		} catch (error) {
+			console.warn("[TWITCH] Liste clips :", error.message || error);
+			return [];
+		}
+	}
+
 	async function createClip() {
 		const token = clipsUserToken();
 
@@ -482,6 +510,7 @@ function createHelix(config) {
 		getGame,
 		getAdSchedule,
 		createClip,
+		getClips,
 		sendChatMessage,
 		sendChatAnnouncement,
 		formatUptime

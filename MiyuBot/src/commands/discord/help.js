@@ -45,7 +45,8 @@ module.exports = {
                 "`/lockdown` `/unlock`\n" +
                 "`/antinuke` `/whitelist`\n" +
                 "`/cases` `/setupcheck` `/syncmembers`\n" +
-                "`/ticket` — Panneau, list, reopen";
+                "`/ticket` — Panneau, list, reopen\n" +
+                "`/clips` — Salon dédié aux clips Twitch";
         }
 
         return message.reply(text);

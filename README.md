@@ -106,6 +106,7 @@ Optionnel :
 | `TWITCH_DISCORD_INVITE` | lien envoyé par `!discord` (ton invitation, pas un exemple du dépôt) |
 | `TWITCH_SOCIALS_URL` | lien envoyé par `!socials` |
 | `TWITCH_DISCORD_LIVE_CHANNEL_ID` | salon Discord pour l’annonce live |
+| `TWITCH_DISCORD_CLIPS_CHANNEL_ID` | salon Discord **uniquement clips** (sinon `/clips` crée `#clips`) |
 | `TWITCH_DISABLED_COMMANDS` | commandes à laisser à un autre bot (ex. WizeBot). Garder `so`, `discord`, `socials`, `clip` ici si tu les veux |
 
 En tchat partagé, les commandes et liens des **autres** chaînes sont ignorés. Les réponses partent en visible uniquement sur ta chaîne (Helix `for_source_only`). Ça demande `TWITCH_CLIENT_ID` + `TWITCH_CLIENT_SECRET` et le scope `user:write:chat` autorisé pour le bot.
@@ -128,6 +129,7 @@ TWITCH_CLIENT_SECRET=
 TWITCH_ADS_TOKEN=
 TWITCH_CLIPS_TOKEN=
 TWITCH_DISCORD_LIVE_CHANNEL_ID=
+TWITCH_DISCORD_CLIPS_CHANNEL_ID=
 TWITCH_DISCORD_INVITE=
 TWITCH_SOCIALS_URL=
 TWITCH_DISABLED_COMMANDS=
@@ -154,6 +156,7 @@ Tape `/` dans Discord.
 | `/ban` `/kick` `/timeout` `/warn` | Modération |
 | `/lockdown` `/unlock` | Lock serveur |
 | `/whitelist` `/antinuke` | Anti-nuke |
+| `/clips` | Crée **#clips** (lecture seule) pour les clips Twitch |
 | `/ticket panel` | Crée **#ouvrir-ticket** + bouton |
 | `/ticket setup` | Catégorie + rôle staff |
 

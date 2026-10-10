@@ -107,6 +107,9 @@ describe("batterie Twitch", () => {
         assert.match(twitch, /adsWatcher\.start/);
         assert.match(twitch, /createDonateWatcher/);
         assert.match(twitch, /donateWatcher\.start/);
+        assert.match(twitch, /createClipWatcher/);
+        assert.match(twitch, /clipWatcher\.start/);
+        assert.match(helix, /getClips/);
     });
 
     test("copie Fly Twitch alignée", () => {

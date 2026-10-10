@@ -12,6 +12,7 @@ const { createChatQueue } = require("./twitch/chatQueue");
 const { createAutomod } = require("./twitch/automod");
 const { createCommandRouter } = require("./twitch/commands");
 const { createLiveWatcher } = require("./twitch/liveWatcher");
+const { createClipWatcher } = require("./twitch/clipWatcher");
 const { createAdsWatcher } = require("./twitch/adsWatcher");
 const { createDonateWatcher } = require("./twitch/donateWatcher");
 const { isForeignSharedChat } = require("./twitch/sharedChat");
@@ -112,13 +113,6 @@ const queue = createChatQueue(
 	(text) => helix.sendChatAnnouncement(text, { sourceOnly: true })
 );
 const automod = createAutomod(config, client, queue);
-const commands = createCommandRouter({
-	config,
-	client,
-	queue,
-	helix,
-	automod
-});
 
 let discordClientRef = null;
 
@@ -129,6 +123,20 @@ function setDiscordClient(client) {
 function getDiscordClient() {
 	return discordClientRef;
 }
+
+const clipWatcher = createClipWatcher({
+	config,
+	helix,
+	getDiscordClient
+});
+const commands = createCommandRouter({
+	config,
+	client,
+	queue,
+	helix,
+	automod,
+	clipWatcher
+});
 
 const liveWatcher = createLiveWatcher({
 	config,
@@ -314,6 +322,7 @@ client.on("connected", (address, port) => {
 		`[TWITCH] Connecté ${address}:${port} — #${config.channel}`
 	);
 	liveWatcher.start();
+	clipWatcher.start();
 	adsWatcher.start();
 	donateWatcher.start();
 });
@@ -380,6 +389,7 @@ async function shutdownTwitch() {
 	}
 
 	liveWatcher.stop();
+	clipWatcher.stop();
 	adsWatcher.stop();
 	donateWatcher.stop();
 
